@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+		"experimentalDecorators": false,
+      "baseUrl": ".",
+      "paths": { "*": ["types/*"] },
+      "outDir": "./dist/",
+      "noImplicitAny": true,
+      "module": "es6",
+      "target": "es2018",
+      "jsx": "react",
+      "allowJs": true
+    }
+  }
