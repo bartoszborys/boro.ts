@@ -1,2 +1,5 @@
-# boro.ts
-Home-made tools which help build web apps quicker
+# Boro.ts - Pre Alpha 0.0.1
+Homemade tool which helps create web applications quicker. 
+
+# Docs
+In progress
