@@ -1,4 +1,4 @@
-import { OverridedProperties } from "src/types/OverridedPropeties";
+import { OverridedProperties } from "./OverridedPropeties";
 
 export interface ComponentCore{
 	[key: string]: any;

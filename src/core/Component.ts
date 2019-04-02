@@ -1,6 +1,6 @@
 import { components } from '../../src/index';
 import { ComponentConfig } from './types/ComponentConfig';
-import { ComponentCore } from './ComponentCore';
+import { ComponentCore } from './types/ComponentCore';
 import { OverridedProperties } from './types/OverridedPropeties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 
