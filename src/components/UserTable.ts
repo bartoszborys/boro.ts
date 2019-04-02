@@ -1,4 +1,4 @@
-import { ComponentConfig } from 'src/types/ComponentConfig';
+import { ComponentConfig } from '../core/types/ComponentConfig';
 import { Component } from '../core/Component';
 
 export class UserTable extends Component{

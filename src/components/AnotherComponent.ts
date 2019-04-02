@@ -1,5 +1,5 @@
 import { Component } from '../core/Component';
-import { ComponentConfig } from 'src/types/ComponentConfig';
+import { ComponentConfig } from '../core/types/ComponentConfig';
 
 export class AnotherComponent extends Component{
 	public config: ComponentConfig = {

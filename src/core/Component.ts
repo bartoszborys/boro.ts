@@ -1,8 +1,8 @@
 import { components } from '../../src/index';
-import { ComponentConfig } from 'src/types/ComponentConfig';
+import { ComponentConfig } from './types/ComponentConfig';
 import { ComponentCore } from './ComponentCore';
-import { OverridedProperties } from 'src/types/OverridedPropeties';
-import { BoundInterpolations } from 'src/types/BoundInterpolations';
+import { OverridedProperties } from './types/OverridedPropeties';
+import { BoundInterpolations } from './types/BoundInterpolations';
 
 export abstract class Component implements ComponentCore {
 	public abstract readonly config: ComponentConfig;

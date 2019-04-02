@@ -1,5 +1,5 @@
 import { Component } from '../core/Component';
-import { ComponentConfig } from 'src/types/ComponentConfig';
+import { ComponentConfig } from '../core/types/ComponentConfig';
 
 export class Main extends Component{
 	public config: ComponentConfig = {
@@ -35,7 +35,7 @@ export class Main extends Component{
 					<div #click="call_boro">Current power: {{power}}</div>
 				</div>
 			</div>
-		`.repeat(1)
+		`
 	}
 
 	call_boro(){
