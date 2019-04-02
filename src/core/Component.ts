@@ -40,7 +40,7 @@ export abstract class Component implements ComponentCore {
 		this.createChildrenComponents(this.hostNode.childNodes);
 		this.bindChildOutputs();
 		this.bindChildInputs();
-		this.bindPropertyBindings();
+		this.bindDomElementProperties();
 		this.onAfterTemplate();
 		this.renderChilds();
 		return this;
@@ -65,80 +65,113 @@ export abstract class Component implements ComponentCore {
 	}
 	
 	private bindTemplateInterpolations(): void{
-		const textNodes: TreeWalker = document.createTreeWalker(this.template, NodeFilter.SHOW_TEXT);
+		const nodes: TreeWalker = document.createTreeWalker(this.template, NodeFilter.SHOW_TEXT);
 		const generator = this.getComponentIdGenerator();
-		const currentObject: ComponentCore = this;
-		let textNode = null;
-		while(textNode = textNodes.nextNode()){
-			const interpolations: string[] = textNode.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
+		
+		let node: Text = null;
+		while(node = <Text>nodes.nextNode()){
+			this.bindTextNodeInterpolations(node, generator)
+		}
+	}
 
-			if(interpolations === null){
-				continue;
-			}
-			
-			for(const interpolation of interpolations){
-				const memberName: string = interpolation.replace("}}", "").replace("{{", "");
-				
-				const currentNodeAttributes = this.getNodeAttributesWithPrefix(this.getComponentIdPrefix(), textNode.parentElement);
-				const attributesCount = currentNodeAttributes.length;
-				
-				if(attributesCount > 1){
-					throw new Error('Node has more than 1 boro attribute');
-				}
+	private bindTextNodeInterpolations(node: Text, generator: IterableIterator<string>){
+		const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
 
-				const currentId = (attributesCount == 1) ? currentNodeAttributes.pop().name : `${generator.next().value}`;
-
-				textNode.parentElement.setAttribute(currentId, "");
-				
-				if(this.boundInterpolations[currentId] === undefined){
-					this.boundInterpolations[currentId] = [];
-				}
-				this.boundInterpolations[currentId].push(memberName);
-				this.defineWatch(currentObject, memberName);
-				this.boundOverridenProperties[memberName].changeHandlers.push( () => this.reinterpolateNodeWithId(currentId) )
-			}
+		if(interpolations === null){
+			return;
+		}
+		
+		const currentId = this.getInterpolatedNodeId(node, generator);
+		node.parentElement.setAttribute(currentId, "");
+		
+		for(const interpolation of interpolations){
+			this.bindCurrentInterpolation(currentId, interpolation);
 		}
 	}
 	
-	private bindPropertyBindings(): void{
-		const nodeWithAttributesWalker: TreeWalker = document.createTreeWalker(this.hostNode, NodeFilter.SHOW_ELEMENT)
+	private bindCurrentInterpolation(currentId: string, interpolation: string){
+		const currentObject: ComponentCore = this;
 		
-		const currentComponent: ComponentCore = this;
+		if(this.boundInterpolations[currentId] === undefined){
+			this.boundInterpolations[currentId] = [];
+		}
+
+		const memberName: string = interpolation.replace("}}", "").replace("{{", "");
+		this.boundInterpolations[currentId].push(memberName);
+		this.defineWatch(currentObject, memberName);
+		this.boundOverridenProperties[memberName].changeHandlers.push( () => this.reinterpolateNodeWithId(currentId) )
+	}
+
+	private getInterpolatedNodeId(node: Text, generator: IterableIterator<string>){
+		const currentNodeAttributes = this.getNodeAttributesWithPrefix(this.getComponentIdPrefix(), node.parentElement);
+		const attributesCount = currentNodeAttributes.length;
+		
+		if(attributesCount > 1){
+			throw new Error('Node has more than 1 boro attribute');
+		}
+	
+		return (attributesCount == 1) ? currentNodeAttributes.pop().name : `${generator.next().value}`;
+	}
+
+	private bindDomElementProperties(): void{
+		const nodeWithAttributesWalker: TreeWalker = document.createTreeWalker(this.hostNode, NodeFilter.SHOW_ELEMENT)
+		const inputPrefix = '$';
+		const eventPrefix = '#';
+		
 		let nodeWithAttributes: HTMLElement;
 		while(nodeWithAttributes = <HTMLElement>nodeWithAttributesWalker.nextNode()){
-			const currentEventAttributes = this.getNodeAttributesWithPrefix("#", <HTMLElement>nodeWithAttributes);
-			if(currentEventAttributes.length){
-				for(let currentAttribute of currentEventAttributes){
-					const eventName = currentAttribute.name.replace("#", "");
-					const actionHandlerName = currentAttribute.value;
-					nodeWithAttributes.addEventListener(eventName, () => currentComponent[actionHandlerName]() );
-				}
-			}
-			
-			const currentElementPropertyAttributes = this.getNodeAttributesWithPrefix("$", <HTMLElement>nodeWithAttributes);
-			if(currentElementPropertyAttributes.length){
-				for(let currentAttribute of currentElementPropertyAttributes){
-					let inputName = currentAttribute.name.replace("$", "");
-					const memberName = currentAttribute.value;
-					this.defineWatch(currentComponent, memberName);
-					
-					if( (<any>nodeWithAttributes)[inputName] == undefined ){
-						for(let property in nodeWithAttributes){
-							if(property.toLowerCase() == inputName.toLowerCase()){
-								inputName = property;
-								break;
-							}
-						}
-					}
+			this.bindProperties(eventPrefix, nodeWithAttributes, this.bindEventProperty);
+			this.bindProperties(inputPrefix, nodeWithAttributes, this.bindInputProperty);
+		}
+	}
 
-					if( (<any>nodeWithAttributes)[inputName] != undefined ){
-						(<any>nodeWithAttributes)[inputName] = currentComponent[memberName];
-						const testNode = nodeWithAttributes;
-						this.boundOverridenProperties[memberName].changeHandlers.push( (value: any): void => {
-							(<any>testNode)[inputName] = value;
-						} )
-					}
-				}
+	private bindProperties(attributePrefix: string, nodeWithAttributes: HTMLElement, bindingHandler: (node: HTMLElement, propery: Attr)=>void){
+		const currentEventAttributes = this.getNodeAttributesWithPrefix(attributePrefix, nodeWithAttributes);
+
+		if(!currentEventAttributes.length){
+			return;
+		}
+
+		const handlerWithCorrectPointer = bindingHandler.bind(this);
+		for(let currentAttribute of currentEventAttributes){
+			handlerWithCorrectPointer(nodeWithAttributes, currentAttribute);
+			nodeWithAttributes.removeAttribute(`${currentAttribute.name}`);
+		}
+	}
+
+	private bindEventProperty(node: HTMLElement, property: Attr){
+		const currentComponent: ComponentCore = this;
+		const eventName = property.name.replace("#", "");
+		const actionHandlerName = property.value;
+		node.addEventListener(eventName, () => currentComponent[actionHandlerName]() );
+	}
+
+	private bindInputProperty(node: HTMLElement, attrubute: Attr){
+		const currentComponent: ComponentCore = this;
+		const nodeWithAnyProperty: any = <any>node;
+		let propertyName = attrubute.name.replace("$", "");
+		const memberName = attrubute.value;
+		this.defineWatch(currentComponent, memberName);
+		
+		if( nodeWithAnyProperty[propertyName] == undefined ){
+			propertyName = this.getCamelCasePropertyName(propertyName, node);
+		}
+
+		if( nodeWithAnyProperty[propertyName] != undefined ){
+			nodeWithAnyProperty[propertyName] = currentComponent[memberName];
+		
+			const propertyChangedHandler = (value: any): void => {
+				nodeWithAnyProperty[propertyName] = value;
+			}
+
+			this.boundOverridenProperties[memberName].changeHandlers.push(propertyChangedHandler);
+		}
+	}
+
+	private getCamelCasePropertyName(searchedProperty: string, node: HTMLElement){
+		for(let property in node){
+			if(property.toLowerCase() == searchedProperty.toLowerCase()){
+				return property;
 			}
 		}
 	}
@@ -258,7 +291,7 @@ export abstract class Component implements ComponentCore {
 		if (eventFromChild) {
 			const currentObject: ComponentCore = this;
 			if (!(currentObject[handlerName] instanceof Function)) {
-				throw new Error("Handler is not defined");
+				throw new Error("Output handler is not defined");
 			}
 			currentObject[handlerName](event.detail);
 		}
@@ -286,7 +319,6 @@ export abstract class Component implements ComponentCore {
 
 	private defineWatch(currentObject: ComponentCore, varToWatch: string){
 		if(this.boundOverridenProperties[varToWatch] !== undefined){
-			console.warn(`Watch >> ${varToWatch} already set.`);
 			return;
 		}
 
