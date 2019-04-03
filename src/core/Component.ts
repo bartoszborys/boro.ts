@@ -1,21 +1,21 @@
 import { components } from '../../src/index';
 import { ComponentConfig } from './types/ComponentConfig';
 import { ComponentCore } from './types/ComponentCore';
+import { UnknownComponent } from './types/UnknownComponent';
 import { OverridedProperties } from './types/OverridedPropeties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 
-export abstract class Component implements ComponentCore {
-	public abstract readonly config: ComponentConfig;
-	protected abstract getTemplate(): string;
-
-	public hostNode: HTMLElement;
-	public boundOverridenProperties: OverridedProperties;
-	private boundInterpolations: BoundInterpolations;
-	private children: Array<ComponentCore>;
-	private template: HTMLElement;
-	
+export abstract class Component implements ComponentCore, UnknownComponent {
+	protected hostNode: HTMLElement;
 	protected onInitialize(): void {};
 	protected onAfterTemplate(): any {};
+	protected abstract getTemplate(): string;
+	protected abstract readonly config: ComponentConfig;
+	
+	private boundOverridenProperties: OverridedProperties;
+	private boundInterpolations: BoundInterpolations;
+	private children: Array<UnknownComponent>;
+	private template: HTMLElement;
 
 	protected triggerOutput: (outputName: string, valueToEmitt: any) => void = (name: string, value: any) => {
 		this.hostNode.dispatchEvent(new CustomEvent(name, { detail: value }));
@@ -30,6 +30,10 @@ export abstract class Component implements ComponentCore {
 	public setHostNode(_hostNode: HTMLElement) {
 		this.hostNode = _hostNode;
 		return this;
+	}
+
+	public getName(): string {
+		return this.config.name;
 	}
 
 	public render() {
@@ -90,7 +94,7 @@ export abstract class Component implements ComponentCore {
 	}
 	
 	private bindCurrentInterpolation(currentId: string, interpolation: string){
-		const currentObject: ComponentCore = this;
+		const currentObject: UnknownComponent = this;
 		
 		if(this.boundInterpolations[currentId] === undefined){
 			this.boundInterpolations[currentId] = [];
@@ -140,14 +144,14 @@ export abstract class Component implements ComponentCore {
 	}
 
 	private bindEventProperty(node: HTMLElement, property: Attr){
-		const currentComponent: ComponentCore = this;
+		const currentComponent: UnknownComponent = this;
 		const eventName = property.name.replace("#", "");
 		const actionHandlerName = property.value;
 		node.addEventListener(eventName, () => currentComponent[actionHandlerName]() );
 	}
 
 	private bindInputProperty(node: HTMLElement, attrubute: Attr){
-		const currentComponent: ComponentCore = this;
+		const currentComponent: UnknownComponent = this;
 		const nodeWithAnyProperty: any = <any>node;
 		let propertyName = attrubute.name.replace("$", "");
 		const memberName = attrubute.value;
@@ -289,7 +293,7 @@ export abstract class Component implements ComponentCore {
 	private outputHandler(event: CustomEvent, handlerName: string) {
 		const eventFromChild = this.children.map(child => child.hostNode).indexOf(event.srcElement as HTMLElement) !== -1;
 		if (eventFromChild) {
-			const currentObject: ComponentCore = this;
+			const currentObject: UnknownComponent = this;
 			if (!(currentObject[handlerName] instanceof Function)) {
 				throw new Error("Output handler is not defined");
 			}
@@ -299,7 +303,7 @@ export abstract class Component implements ComponentCore {
 
 	private bindChildInputs() {
 		const inputPrefix = '$';
-		const currentObject: ComponentCore = this;
+		const currentObject: UnknownComponent = this;
 		for (const childWithAttributes of this.getChildsWithAttributes()) {
 			for (const inputAttributes of this.getNodeAttributesWithPrefix(inputPrefix, childWithAttributes.hostNode)) {
 				const childInputName = inputAttributes.name.substr(1);
@@ -317,7 +321,7 @@ export abstract class Component implements ComponentCore {
 		}
 	}
 
-	private defineWatch(currentObject: ComponentCore, varToWatch: string){
+	private defineWatch(currentObject: UnknownComponent, varToWatch: string){
 		if(this.boundOverridenProperties[varToWatch] !== undefined){
 			return;
 		}
@@ -340,7 +344,7 @@ export abstract class Component implements ComponentCore {
 		currentObject[varToWatch] = value;
 	}
 
-	private getChildsWithAttributes(): ComponentCore[] {
+	private getChildsWithAttributes(): UnknownComponent[] {
 		return this.children.filter(child => child.hostNode.hasAttributes());
 	}
 

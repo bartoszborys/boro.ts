@@ -1,8 +1,8 @@
 import { Main } from "./components/Main";
 import { UserTable } from "./components/UserTable";
 import { AnotherComponent } from "./components/AnotherComponent";
-import { Component } from "./core/Component";
-import { RegisteredComponents } from "./types/RegisteredComponents";
+import { RegisteredComponents } from "./core/types/RegisteredComponents";
+import { ComponentCore } from "./core/types/ComponentCore";
 
 const componentsList = [
 	Main,
@@ -14,16 +14,15 @@ export const components: RegisteredComponents = {};
 
 function startApp(){
 	bindComponentsToTheirNames();
-	const rootElement: HTMLElement = getRootHtmlElement();
 	new Main()
-		.setHostNode( rootElement )
+		.setHostNode( getRootHtmlElement() )
 		.render()
 }
 
 function bindComponentsToTheirNames(): void{
 	componentsList.forEach( (ComponentConstructor: any) => {
-		const component: Component = new ComponentConstructor();
-		components[component.config.name.toLowerCase()] = ComponentConstructor;
+		const component: ComponentCore = new ComponentConstructor();
+		components[component.getName().toLowerCase()] = ComponentConstructor;
 	})
 }
 
