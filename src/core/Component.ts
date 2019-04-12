@@ -1,9 +1,9 @@
-import { components } from '../../src/index';
 import { ComponentConfig } from './types/ComponentConfig';
 import { ComponentCore } from './types/ComponentCore';
 import { UnknownComponent } from './types/UnknownComponent';
 import { OverridedProperties } from './types/OverridedPropeties';
 import { BoundInterpolations } from './types/BoundInterpolations';
+import { RegisteredComponents } from './types/RegisteredComponents';
 
 export abstract class Component implements ComponentCore, UnknownComponent {
 	protected hostNode: HTMLElement;
@@ -12,6 +12,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	protected abstract getTemplate(): string;
 	protected abstract readonly config: ComponentConfig;
 	
+	private components: RegisteredComponents;
 	private boundOverridenProperties: OverridedProperties;
 	private boundInterpolations: BoundInterpolations;
 	private children: Array<UnknownComponent>;
@@ -34,6 +35,11 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 
 	public getName(): string {
 		return this.config.name;
+	}
+
+	public injectComponents(components: RegisteredComponents): Component{
+		this.components = components;
+		return this;
 	}
 
 	public render() {
@@ -271,9 +277,13 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 			return;
 		}
 
-		if (components.hasOwnProperty(nodeName.toLowerCase())) {
-			const ComponentConstructor: any = components[nodeName.toLowerCase()];
-			this.children.push(new ComponentConstructor().setHostNode(childNode));
+		if (this.components.hasOwnProperty(nodeName.toLowerCase())) {
+			const ComponentConstructor: any = this.components[nodeName.toLowerCase()];
+			this.children.push(
+				new ComponentConstructor()
+					.setHostNode(childNode)
+					.injectComponents(this.components)
+			);
 		}
 	}
 

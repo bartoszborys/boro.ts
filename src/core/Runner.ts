@@ -16,6 +16,7 @@ function startApp(){
 	bindComponentsToTheirNames();
 	new Main()
 		.setHostNode( getRootHtmlElement() )
+		.injectComponents(components)
 		.render()
 }
 
