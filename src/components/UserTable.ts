@@ -1,5 +1,5 @@
-import { ComponentConfig } from '../../types/ComponentConfig';
-import { Component } from '../../Component';
+import { ComponentConfig } from '../core/types/ComponentConfig';
+import { Component } from '../core/Component';
 
 export class UserTable extends Component{
 	public config: ComponentConfig = {

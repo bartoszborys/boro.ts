@@ -1,3 +1,5 @@
+import { Component } from "../Component";
+
 export interface RegisteredComponents{
-	[key: string]: any;
+	[key: string]: typeof Component;
 }
