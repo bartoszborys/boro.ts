@@ -1,8 +1,8 @@
-import { Main } from "./components/Main";
-import { UserTable } from "./components/UserTable";
-import { AnotherComponent } from "./components/AnotherComponent";
-import { RegisteredComponents } from "./core/types/RegisteredComponents";
-import { ComponentCore } from "./core/types/ComponentCore";
+import { Main } from "./tests/components/Main";
+import { UserTable } from "./tests/components/UserTable";
+import { AnotherComponent } from "./tests/components/AnotherComponent";
+import { RegisteredComponents } from "../core/types/RegisteredComponents";
+import { ComponentCore } from "../core/types/ComponentCore";
 
 const componentsList = [
 	Main,
