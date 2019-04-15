@@ -1,29 +1,94 @@
-import { Main } from '../../components/Main';
+import { ComponentTest } from './ComponentTest';
 import { ComponentRegistrator } from '../ComponentsRegistrator';
+import { ComponentTestChild } from './ComponentTestChild';
 
 const componentRegistrator: ComponentRegistrator = new ComponentRegistrator();
 componentRegistrator.register([
-	Main
+	ComponentTest,
+	ComponentTestChild
 ]);
 
-const testedComponent: Main = new Main();
-const hostNode = document.createElement('main');
-
-testedComponent
-	.setHostNode(hostNode)
-	.injectComponents(componentRegistrator.get())
-	.render();
+function getTestedInstance(hostNode: HTMLElement): ComponentTest{
+	return new ComponentTest()
+		.setHostNode(hostNode)
+		.injectComponents( componentRegistrator.get() ) as ComponentTest
+}
 
 test('Children generated', ()=>{
+	const hostNode = document.createElement('test');
+	getTestedInstance(hostNode).render();
 	expect( hostNode.hasChildNodes() ).toBeTruthy();
 })
 
-test('First level is ok', ()=>{
-	expect(hostNode.children.item(0).nodeName).toBe('DIV');
+test('Children first level is ok', ()=>{
+	const hostNode = document.createElement('test');
+	getTestedInstance(hostNode).render();
+	const expectedChildren = ['DIV', 'INPUT', 'COMPONENT-TEST-CHILD', 'DIV'];
+	
+	for(const [index, expectedChildTagName] of Object.entries(expectedChildren)){
+		expect(hostNode.children.item( parseInt(index) ).nodeName).toBe(expectedChildTagName);
+	}
 })
-test('Second level is ok', ()=>{
-	const expected = ['DIV', 'H1', 'H2', 'USER-TABLE', 'DIV'];
-	expected.forEach((value: string , index: number)=>{
-		expect(hostNode.children.item(0).children.item(index).nodeName).toBe(value);
-	})
+
+test('Second level child generated', ()=>{
+	const expectedChildren = ['DIV', 'SPAN'];
+	const hostNode = document.createElement('test');
+	getTestedInstance(hostNode).render();
+	const childrenHostNode = hostNode.children.item(3).children.item(0);
+	for(const [index, expectedChildTagName] of Object.entries(expectedChildren)){
+		expect(childrenHostNode.children.item( parseInt(index) ).nodeName).toBe(expectedChildTagName);
+	}
+})
+
+test('First child interpolated correctly', ()=>{
+	const hostNode = document.createElement('test');
+	getTestedInstance(hostNode).render();
+	expect(hostNode.children.item(0).hasAttribute('boro-element-1')).toBeTruthy()
+	expect(hostNode.children.item(0).textContent).toBe('Hello world!');
+})
+
+test('First child reinterpolated correctly', ()=>{
+	const hostNode = document.createElement('test');
+	const testedComponent = getTestedInstance(hostNode).render();
+	const expectedText = "Changed";
+	testedComponent.hello = expectedText;
+	expect(hostNode.children.item(0).textContent).toBe(expectedText);
+})
+
+test('Output bound correctly', ()=>{
+	const hostNode = document.createElement('test');
+	const testedComponent = getTestedInstance(hostNode);
+	testedComponent.testedMethod = jest.fn();
+	testedComponent.render();
+
+	( <HTMLInputElement>hostNode.querySelector('input') ).click();
+	expect(testedComponent.testedMethod).toBeCalledTimes(1);
+})
+
+test('Input bound correctly', ()=>{
+	const hostNode = document.createElement('test');
+	const testedComponent = getTestedInstance(hostNode).render();
+
+	const buttonName = ( <HTMLInputElement>hostNode.querySelector('input') ).value
+	expect(buttonName).toBe(testedComponent.inputDescribeText);
+})
+
+test('Child generated', ()=>{
+	const hostNode = document.createElement('test');
+	getTestedInstance(hostNode).render();
+	const childComponentNode = hostNode.querySelector('component-test-child');
+
+	expect(childComponentNode.hasChildNodes()).toBeTruthy();
+	expect(childComponentNode.querySelector('div').textContent).toBe(new ComponentTestChild().greeting)
+})
+
+test('Child inpunt binding works', ()=>{
+	const hostNode = document.createElement('test');
+	const testedComponent = getTestedInstance(hostNode).render();
+	const childComponentNode = hostNode.querySelector('component-test-child');
+	expect(childComponentNode.querySelector('span').textContent).toBe(testedComponent.toChild);
+	
+	const newMessage: string = "MessageToChild";
+	testedComponent.toChild = newMessage;
+	expect(childComponentNode.querySelector('span').textContent).toBe(newMessage);
 })
