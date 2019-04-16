@@ -13,8 +13,8 @@ export class ComponentTest extends Component{
 	protected getTemplate(): string {
 		return `
 			<div>{{hello}}</div>
-			<input #click="testedMethod" $value="inputDescribeText" type="button"/>
 			<component-test-child $fromparent="toChild"></component-test-child>
+			<input #click="testedMethod" $value="inputDescribeText" type="button"/>
 			<div>
 				<component-test-child><component-test-child>
 			</div>

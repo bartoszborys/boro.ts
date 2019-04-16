@@ -47,10 +47,10 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		this.cleanUp();
 		this.onInitialize();
 		this.insertTemplate();
+		this.bindDomElementProperties();
 		this.createChildrenComponents(this.hostNode.childNodes);
 		this.bindChildOutputs();
 		this.bindChildInputs();
-		this.bindDomElementProperties();
 		this.onAfterTemplate();
 		this.renderChilds();
 		return this;
@@ -130,6 +130,9 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		
 		let nodeWithAttributes: HTMLElement;
 		while(nodeWithAttributes = <HTMLElement>nodeWithAttributesWalker.nextNode()){
+			if(this.components[nodeWithAttributes.nodeName.toLowerCase()] != undefined){
+				continue;
+			}
 			this.bindProperties(eventPrefix, nodeWithAttributes, this.bindEventProperty);
 			this.bindProperties(inputPrefix, nodeWithAttributes, this.bindInputProperty);
 		}

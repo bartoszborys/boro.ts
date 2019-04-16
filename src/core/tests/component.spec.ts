@@ -23,7 +23,7 @@ test('Children generated', ()=>{
 test('Children first level is ok', ()=>{
 	const hostNode = document.createElement('test');
 	getTestedInstance(hostNode).render();
-	const expectedChildren = ['DIV', 'INPUT', 'COMPONENT-TEST-CHILD', 'DIV'];
+	const expectedChildren = ['DIV', 'COMPONENT-TEST-CHILD', 'INPUT', 'DIV'];
 	
 	for(const [index, expectedChildTagName] of Object.entries(expectedChildren)){
 		expect(hostNode.children.item( parseInt(index) ).nodeName).toBe(expectedChildTagName);
