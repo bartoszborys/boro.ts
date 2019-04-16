@@ -4,6 +4,7 @@ import { UnknownComponent } from './types/UnknownComponent';
 import { OverridedProperties } from './types/OverridedPropeties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 import { RegisteredComponents } from './types/RegisteredComponents';
+import { ChildGenerator } from './lib/ChildGenerator';
 
 export abstract class Component implements ComponentCore, UnknownComponent {
 	protected hostNode: HTMLElement;
@@ -48,7 +49,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		this.onInitialize();
 		this.insertTemplate();
 		this.bindDomElementProperties();
-		this.createChildrenComponents(this.hostNode.childNodes);
+		this.createChildrenComponents();
 		this.bindChildOutputs();
 		this.bindChildInputs();
 		this.onAfterTemplate();
@@ -266,28 +267,8 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		}
 	}
 
-	private createChildrenComponents(childrenNodes: NodeListOf<ChildNode>) {
-		childrenNodes.forEach((childNode: HTMLElement) => this.createChildComponent(childNode))
-	}
-
-	private createChildComponent(childNode: HTMLElement) {
-		if (childNode.childElementCount > 0) {
-			this.createChildrenComponents(childNode.childNodes);
-		}
-
-		const nodeName: string = childNode.tagName;
-		if (nodeName === undefined) {
-			return;
-		}
-
-		if (this.components.hasOwnProperty(nodeName.toLowerCase())) {
-			const ComponentConstructor: any = this.components[nodeName.toLowerCase()];
-			this.children.push(
-				new ComponentConstructor()
-					.setHostNode(childNode)
-					.injectComponents(this.components)
-			);
-		}
+	private createChildrenComponents() {
+		this.children = new ChildGenerator(this.components).generate(this.hostNode.childNodes);
 	}
 
 	private bindChildOutputs() {
