@@ -13,12 +13,12 @@ export class PropertyObserver{
 		this.boundProperties[propertyName].changeHandlers.push(observer.update.bind(observer));
 	}
 
-	private bindProperty(currentObject: UnknownComponent, propertyName: string){
+	private bindProperty(object: UnknownComponent, propertyName: string){
 		if(this.boundProperties[propertyName] !== undefined){
 			return;
 		}
 		this.initializeProperty(propertyName);
-		this.bindProxy(currentObject, propertyName);
+		this.bindProxy(object, propertyName);
 	}
 
 	private initializeProperty(propertyName: string){
@@ -28,9 +28,9 @@ export class PropertyObserver{
 		}
 	}
 
-	private bindProxy(currentObject: UnknownComponent, propertyName: string) {
-		const value = currentObject[propertyName];
-		Object.defineProperty(currentObject, propertyName, {
+	private bindProxy(object: UnknownComponent, propertyName: string) {
+		const value = object[propertyName];
+		Object.defineProperty(object, propertyName, {
 			get: () => this.boundProperties[propertyName].value,
 			set: (value: any) => {
 				this.boundProperties[propertyName].value = value;
@@ -39,6 +39,6 @@ export class PropertyObserver{
 				}
 			}
 		});
-		currentObject[propertyName] = value;
+		object[propertyName] = value;
 	}
 }
