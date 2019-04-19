@@ -1,4 +1,4 @@
-import { UnknownComponent } from "../types/UnknownComponent";
+import { UnknownProperties } from "../types/UnknownProperties";
 import { OverridedProperties } from "../types/OverridedPropeties";
 
 export interface Observer<Type>{
@@ -8,12 +8,12 @@ export interface Observer<Type>{
 export class PropertyObserver{
 	public constructor(private boundProperties: OverridedProperties = {}){};
 
-	public observe(object: UnknownComponent, propertyName: string, observer: Observer<any>): void{
+	public observe(object: UnknownProperties, propertyName: string, observer: Observer<any>): void{
 		this.bindProperty(object, propertyName);
 		this.boundProperties[propertyName].changeHandlers.push(observer.update.bind(observer));
 	}
 
-	private bindProperty(object: UnknownComponent, propertyName: string){
+	private bindProperty(object: UnknownProperties, propertyName: string){
 		if(this.boundProperties[propertyName] !== undefined){
 			return;
 		}
@@ -28,7 +28,7 @@ export class PropertyObserver{
 		}
 	}
 
-	private bindProxy(object: UnknownComponent, propertyName: string) {
+	private bindProxy(object: UnknownProperties, propertyName: string) {
 		const value = object[propertyName];
 		Object.defineProperty(object, propertyName, {
 			get: () => this.boundProperties[propertyName].value,

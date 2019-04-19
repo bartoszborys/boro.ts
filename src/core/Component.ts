@@ -1,13 +1,13 @@
 import { ComponentConfig } from './types/ComponentConfig';
 import { ComponentCore } from './types/ComponentCore';
-import { UnknownComponent } from './types/UnknownComponent';
+import { UnknownProperties } from './types/UnknownProperties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 import { RegisteredComponents } from './types/RegisteredComponents';
 import { ChildGenerator } from './lib/ChildGenerator';
 import { PropertyObserver, Observer } from './lib/PropertyObserver';
 import { InputAttributeObserver } from './lib/InputAttributeObserver';
 
-export abstract class Component implements ComponentCore, UnknownComponent {
+export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
 	protected onInitialize(): void {};
 	protected onAfterTemplate(): any {};
@@ -17,7 +17,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	private propertyObserver: PropertyObserver;
 	private components: RegisteredComponents;
 	private boundInterpolations: BoundInterpolations;
-	private children: Array<UnknownComponent>;
+	private children: Array<UnknownProperties>;
 	private template: HTMLElement;
 
 	protected triggerOutput: (outputName: string, valueToEmitt: any) => void = (name: string, value: any) => {
@@ -102,7 +102,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	}
 	
 	private bindCurrentInterpolation(currentId: string, interpolation: string){
-		const currentObject: UnknownComponent = this;
+		const currentObject: UnknownProperties = this;
 		
 		if(this.boundInterpolations[currentId] === undefined){
 			this.boundInterpolations[currentId] = [];
@@ -161,14 +161,14 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	}
 
 	private bindEventProperty(node: HTMLElement, property: Attr){
-		const currentComponent: UnknownComponent = this;
+		const currentComponent: UnknownProperties = this;
 		const eventName = property.name.replace("#", "");
 		const actionHandlerName = property.value;
 		node.addEventListener(eventName, () => currentComponent[actionHandlerName]() );
 	}
 
 	private bindInputProperty(node: HTMLElement, attrubute: Attr){
-		const currentComponent: UnknownComponent = this;
+		const currentComponent: UnknownProperties = this;
 		const nodeWithAnyProperty: any = <any>node;
 		const memberName = attrubute.value;
 		let propertyName = attrubute.name.replace("$", "");
@@ -217,7 +217,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	}
 
 	private replaceInterpolationsWithValue(boundMemberNames: string[], interpolatedNode: HTMLElement){
-		const currentObject: UnknownComponent = this;
+		const currentObject: UnknownProperties = this;
 		for(const currentMemberName of boundMemberNames){
 			const newValue: string = currentObject[currentMemberName];
 			for(const node of Array.from(interpolatedNode.childNodes)){
@@ -290,7 +290,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	private outputHandler(event: CustomEvent, handlerName: string) {
 		const eventFromChild = this.children.map(child => child.hostNode).indexOf(event.srcElement as HTMLElement) !== -1;
 		if (eventFromChild) {
-			const currentObject: UnknownComponent = this;
+			const currentObject: UnknownProperties = this;
 			if (!(currentObject[handlerName] instanceof Function)) {
 				throw new Error("Output handler is not defined");
 			}
@@ -300,7 +300,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 
 	private bindChildInputs() {
 		const inputPrefix = '$';
-		const currentObject: UnknownComponent = this;
+		const currentObject: UnknownProperties = this;
 		for (const childWithAttributes of this.getChildsWithAttributes()) {
 			for (const inputAttributes of this.getNodeAttributesWithPrefix(inputPrefix, childWithAttributes.hostNode)) {
 				const childInputName = inputAttributes.name.substr(1);
@@ -318,7 +318,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 			}
 		}
 	}
-	private getChildsWithAttributes(): UnknownComponent[] {
+	private getChildsWithAttributes(): UnknownProperties[] {
 		return this.children.filter(child => child.hostNode.hasAttributes());
 	}
 
