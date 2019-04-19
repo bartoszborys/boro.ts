@@ -4,7 +4,7 @@ import { UnknownProperties } from './types/UnknownProperties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 import { RegisteredComponents } from './types/RegisteredComponents';
 import { ChildGenerator } from './lib/ChildGenerator';
-import { PropertyObserver, Observer } from './lib/PropertyObserver';
+import { PropertiesBinder, Observer } from './lib/PropertiesBinder';
 import { InputAttributeObserver } from './lib/InputAttributeObserver';
 
 export abstract class Component implements ComponentCore, UnknownProperties {
@@ -14,7 +14,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	protected abstract getTemplate(): string;
 	protected abstract readonly config: ComponentConfig;
 	
-	private propertyObserver: PropertyObserver;
+	private propertyObserver: PropertiesBinder;
 	private components: RegisteredComponents;
 	private boundInterpolations: BoundInterpolations;
 	private children: Array<UnknownProperties>;
@@ -27,7 +27,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	public constructor() {
 		this.children = [];
 		this.boundInterpolations = {};
-		this.propertyObserver = new PropertyObserver();
+		this.propertyObserver = new PropertiesBinder();
 	}
 
 	public setHostNode(_hostNode: HTMLElement) {

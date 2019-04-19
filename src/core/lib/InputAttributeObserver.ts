@@ -1,4 +1,4 @@
-import { Observer } from "./PropertyObserver";
+import { Observer } from "./PropertiesBinder";
 
 export class InputAttributeObserver implements Observer<any>{
 	constructor(private node: Node, private attributeName: string){}

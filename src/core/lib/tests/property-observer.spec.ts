@@ -1,4 +1,4 @@
-import {PropertyObserver, Observer} from '../PropertyObserver';
+import {PropertiesBinder, Observer} from '../PropertiesBinder';
 
 class MockObserver implements Observer<number>{
 	public testingElement: jest.Mock<any, any>;
@@ -8,7 +8,7 @@ class MockObserver implements Observer<number>{
 	}
 }
 const mockObject = { "propOne": 12 }
-const testedObject = new PropertyObserver();
+const testedObject = new PropertiesBinder();
 
 test('Without observer', ()=>{
 	const expectedValue = 13;

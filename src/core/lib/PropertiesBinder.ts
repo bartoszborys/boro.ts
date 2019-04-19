@@ -5,7 +5,7 @@ export interface Observer<Type>{
 	update(value: Type): void;
 }
 
-export class PropertyObserver{
+export class PropertiesBinder{
 	public constructor(private boundProperties: OverridedProperties = {}){};
 
 	public observe(object: UnknownProperties, propertyName: string, observer: Observer<any>): void{
