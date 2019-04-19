@@ -6,7 +6,7 @@ export class Main extends Component{
 		name: "main"
 	};
 	
-	public header: string = "I'am Parent!";
+	public header: string = "I am Parent!";
 	public anotherHeaderPart: string = "Second header";
 	public firstCounter: number = 0;
 	public firstComponentTitle: string = "First child title";

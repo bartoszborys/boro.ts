@@ -13,12 +13,16 @@ export class ComponentTest extends Component{
 	protected getTemplate(): string {
 		return `
 			<div>{{hello}}</div>
-			<component-test-child $fromparent="toChild"></component-test-child>
+			<component-test-child #fromchild="fromChild" $fromparent="toChild"></component-test-child>
 			<input #click="testedMethod" $value="inputDescribeText" type="button"/>
 			<div>
 				<component-test-child><component-test-child>
 			</div>
 		`
+	}
+
+	public fromChild(){
+		throw new Error("Not implemented yet");
 	}
 
 	public testedMethod(){

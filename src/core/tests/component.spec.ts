@@ -55,7 +55,7 @@ test('First child reinterpolated correctly', ()=>{
 	expect(hostNode.children.item(0).textContent).toBe(expectedText);
 })
 
-test('Output bound correctly', ()=>{
+test('Output property bound correctly', ()=>{
 	const hostNode = document.createElement('test');
 	const testedComponent = getTestedInstance(hostNode);
 	testedComponent.testedMethod = jest.fn();
@@ -65,7 +65,7 @@ test('Output bound correctly', ()=>{
 	expect(testedComponent.testedMethod).toBeCalledTimes(1);
 })
 
-test('Input bound correctly', ()=>{
+test('Input property bound correctly', ()=>{
 	const hostNode = document.createElement('test');
 	const testedComponent = getTestedInstance(hostNode).render();
 
@@ -82,7 +82,7 @@ test('Child generated', ()=>{
 	expect(childComponentNode.querySelector('div').textContent).toBe(new ComponentTestChild().greeting)
 })
 
-test('Child inpunt binding works', ()=>{
+test('Child inpunt binding work', ()=>{
 	const hostNode = document.createElement('test');
 	const testedComponent = getTestedInstance(hostNode).render();
 	const childComponentNode = hostNode.querySelector('component-test-child');
@@ -91,4 +91,18 @@ test('Child inpunt binding works', ()=>{
 	const newMessage: string = "MessageToChild";
 	testedComponent.toChild = newMessage;
 	expect(childComponentNode.querySelector('span').textContent).toBe(newMessage);
+})
+
+test('Child output binding work', ()=>{
+	const hostNode = document.createElement('test');
+	const testedComponent = getTestedInstance(hostNode).render();
+	const mockFunction = jest.fn();
+	testedComponent.fromChild = () => mockFunction()
+	const childNodeButton = hostNode.querySelector('component-test-child button') as HTMLButtonElement;
+	childNodeButton.click();
+	expect(mockFunction).toBeCalled();
+})
+
+test('Case while redefined overriden properties was breaking production while not breaking tests', ()=>{
+	throw new Error('Not implemented yet');
 })
