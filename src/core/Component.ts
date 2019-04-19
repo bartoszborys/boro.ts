@@ -307,12 +307,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 				const childInputName = inputAttributes.name.substr(1);
 				const parentInputName = inputAttributes.value;
 
-				const observer: Observer<any> = {
-					update: (value: any): void => {
-						childWithAttributes[childInputName] = value;
-					}
-				}
-				
+				const observer: Observer<any> = new PropertyObserver(childWithAttributes, childInputName);			
 				this.propertiesBinder.observe(currentObject, parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);
