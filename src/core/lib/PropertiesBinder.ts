@@ -1,12 +1,9 @@
 import { UnknownProperties } from "../types/UnknownProperties";
-import { OverridedProperties } from "../types/OverridedPropeties";
-
-export interface Observer<Type>{
-	update(value: Type): void;
-}
+import { OverriddenProperties } from "../types/OverriddenProperties";
+import { Observer } from "./Observer";
 
 export class PropertiesBinder{
-	public constructor(private boundProperties: OverridedProperties = {}){};
+	public constructor(private boundProperties: OverriddenProperties = {}){};
 
 	public observe(object: UnknownProperties, propertyName: string, observer: Observer<any>): void{
 		this.bindProperty(object, propertyName);

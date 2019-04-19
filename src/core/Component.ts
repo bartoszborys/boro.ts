@@ -4,8 +4,9 @@ import { UnknownProperties } from './types/UnknownProperties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 import { RegisteredComponents } from './types/RegisteredComponents';
 import { ChildGenerator } from './lib/ChildGenerator';
-import { PropertiesBinder, Observer } from './lib/PropertiesBinder';
-import { InputAttributeObserver } from './lib/InputAttributeObserver';
+import { PropertiesBinder } from './lib/PropertiesBinder';
+import { PropertyObserver } from './lib/PropertyObserver';
+import { Observer } from './lib/Observer';
 
 export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
@@ -14,7 +15,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	protected abstract getTemplate(): string;
 	protected abstract readonly config: ComponentConfig;
 	
-	private propertyObserver: PropertiesBinder;
+	private propertiesBinder: PropertiesBinder;
 	private components: RegisteredComponents;
 	private boundInterpolations: BoundInterpolations;
 	private children: Array<UnknownProperties>;
@@ -27,7 +28,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	public constructor() {
 		this.children = [];
 		this.boundInterpolations = {};
-		this.propertyObserver = new PropertiesBinder();
+		this.propertiesBinder = new PropertiesBinder();
 	}
 
 	public setHostNode(_hostNode: HTMLElement) {
@@ -117,7 +118,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		}
 
 		this.boundInterpolations[currentId].push(memberName);
-		this.propertyObserver.observe(currentObject, memberName, observer);
+		this.propertiesBinder.observe(currentObject, memberName, observer);
 	}
 
 	private getInterpolatedNodeId(node: Text, generator: IterableIterator<string>){
@@ -178,9 +179,9 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		}
 
 		if( nodeWithAnyProperty[propertyName] != undefined ){
-			const observer: Observer<any> = new InputAttributeObserver(nodeWithAnyProperty, propertyName);
+			const observer: Observer<any> = new PropertyObserver(nodeWithAnyProperty, propertyName);
 			observer.update( currentComponent[memberName] );
-			this.propertyObserver.observe(currentComponent, memberName, observer);
+			this.propertiesBinder.observe(currentComponent, memberName, observer);
 		}
 	}
 
@@ -312,7 +313,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 					}
 				}
 				
-				this.propertyObserver.observe(currentObject, parentInputName, observer);
+				this.propertiesBinder.observe(currentObject, parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);
 			}
