@@ -102,7 +102,3 @@ test('Child output binding work', ()=>{
 	childNodeButton.click();
 	expect(mockFunction).toBeCalled();
 })
-
-test('Case while redefined overriden properties was breaking production while not breaking tests', ()=>{
-	throw new Error('Not implemented yet');
-})
