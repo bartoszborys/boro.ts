@@ -1,4 +1,5 @@
-import {PropertiesBinder, Observer} from '../PropertiesBinder';
+import { PropertiesBinder } from '../PropertiesBinder';
+import { Observer } from '../Observer';
 
 class MockObserver implements Observer<number>{
 	public testingElement: jest.Mock<any, any>;
