@@ -1,7 +1,7 @@
 import { PropertiesBinder } from '../PropertiesBinder';
 import { Observer } from '../Observer';
 
-class MockObserver implements Observer<number>{
+class MockObserver implements Observer{
 	public testingElement: jest.Mock<any, any>;
 
 	public update(value: number): void {
