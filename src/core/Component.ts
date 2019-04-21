@@ -98,27 +98,23 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		node.parentElement.setAttribute(currentId, "");
 		
 		for(const interpolation of interpolations){
-			this.bindCurrentInterpolation(currentId, interpolation);
+			const memberName: string = interpolation.replace("}}", "").replace("{{", "");
+			this.bindCurrentInterpolation(currentId, memberName);
+			const observer: Observer = {
+				update: (value: any)=>{
+					this.reinterpolateNodeWithId(currentId);
+				}
+			}
+			this.propertiesBinder.observe(this, memberName, observer);
 		}
 	}
 	
-	private bindCurrentInterpolation(currentId: string, interpolation: string){
-		const currentObject: UnknownProperties = this;
-		
+	private bindCurrentInterpolation(currentId: string, memberName: string){
 		if(this.boundInterpolations[currentId] === undefined){
 			this.boundInterpolations[currentId] = [];
 		}
 
-		const memberName: string = interpolation.replace("}}", "").replace("{{", "");
-		
-		const observer: Observer<any> = {
-			update: (value: any)=>{
-				this.reinterpolateNodeWithId(currentId);
-			}
-		}
-
 		this.boundInterpolations[currentId].push(memberName);
-		this.propertiesBinder.observe(currentObject, memberName, observer);
 	}
 
 	private getInterpolatedNodeId(node: Text, generator: IterableIterator<string>){
@@ -179,7 +175,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		}
 
 		if( nodeWithAnyProperty[propertyName] != undefined ){
-			const observer: Observer<any> = new PropertyObserver(nodeWithAnyProperty, propertyName);
+			const observer: Observer = new PropertyObserver(nodeWithAnyProperty, propertyName);
 			observer.update( currentComponent[memberName] );
 			this.propertiesBinder.observe(currentComponent, memberName, observer);
 		}
@@ -307,7 +303,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 				const childInputName = inputAttributes.name.substr(1);
 				const parentInputName = inputAttributes.value;
 
-				const observer: Observer<any> = new PropertyObserver(childWithAttributes, childInputName);			
+				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);			
 				this.propertiesBinder.observe(currentObject, parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);

@@ -1,3 +1,3 @@
-export interface Observer<Type>{
-	update(value: Type): void;
+export interface Observer{
+	update(value: any): void;
 }

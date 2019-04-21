@@ -5,7 +5,7 @@ import { Observer } from "./Observer";
 export class PropertiesBinder{
 	public constructor(private boundProperties: OverriddenProperties = {}){};
 
-	public observe(object: UnknownProperties, propertyName: string, observer: Observer<any>): void{
+	public observe(object: UnknownProperties, propertyName: string, observer: Observer): void{
 		this.bindProperty(object, propertyName);
 		this.boundProperties[propertyName].changeHandlers.push(observer.update.bind(observer));
 	}

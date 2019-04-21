@@ -1,7 +1,7 @@
 import { UnknownProperties } from "../types/UnknownProperties";
 import { Observer } from "./Observer";
 
-export class PropertyObserver implements Observer<any>{
+export class PropertyObserver implements Observer{
 	constructor(private observed: UnknownProperties, private attributeName: string){}
 
 	update(value: any): void {
