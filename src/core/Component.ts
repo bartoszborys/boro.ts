@@ -1,21 +1,24 @@
 import { ComponentConfig } from './types/ComponentConfig';
 import { ComponentCore } from './types/ComponentCore';
-import { UnknownComponent } from './types/UnknownComponent';
-import { OverridedProperties } from './types/OverridedPropeties';
+import { UnknownProperties } from './types/UnknownProperties';
 import { BoundInterpolations } from './types/BoundInterpolations';
 import { RegisteredComponents } from './types/RegisteredComponents';
+import { ChildGenerator } from './lib/ChildGenerator';
+import { PropertiesBinder } from './lib/PropertiesBinder';
+import { PropertyObserver } from './lib/PropertyObserver';
+import { Observer } from './lib/Observer';
 
-export abstract class Component implements ComponentCore, UnknownComponent {
+export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
 	protected onInitialize(): void {};
 	protected onAfterTemplate(): any {};
 	protected abstract getTemplate(): string;
 	protected abstract readonly config: ComponentConfig;
 	
+	private propertiesBinder: PropertiesBinder;
 	private components: RegisteredComponents;
-	private boundOverridenProperties: OverridedProperties;
 	private boundInterpolations: BoundInterpolations;
-	private children: Array<UnknownComponent>;
+	private children: Array<UnknownProperties>;
 	private template: HTMLElement;
 
 	protected triggerOutput: (outputName: string, valueToEmitt: any) => void = (name: string, value: any) => {
@@ -24,8 +27,8 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 
 	public constructor() {
 		this.children = [];
-		this.boundOverridenProperties = {};
 		this.boundInterpolations = {};
+		this.propertiesBinder = new PropertiesBinder();
 	}
 
 	public setHostNode(_hostNode: HTMLElement) {
@@ -47,10 +50,10 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		this.cleanUp();
 		this.onInitialize();
 		this.insertTemplate();
-		this.createChildrenComponents(this.hostNode.childNodes);
+		this.bindDomElementProperties();
+		this.createChildrenComponents();
 		this.bindChildOutputs();
 		this.bindChildInputs();
-		this.bindDomElementProperties();
 		this.onAfterTemplate();
 		this.renderChilds();
 		return this;
@@ -95,21 +98,23 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		node.parentElement.setAttribute(currentId, "");
 		
 		for(const interpolation of interpolations){
-			this.bindCurrentInterpolation(currentId, interpolation);
+			const memberName: string = interpolation.replace("}}", "").replace("{{", "");
+			this.bindCurrentInterpolation(currentId, memberName);
+			const observer: Observer = {
+				update: (value: any)=>{
+					this.reinterpolateNodeWithId(currentId);
+				}
+			}
+			this.propertiesBinder.observe(this, memberName, observer);
 		}
 	}
 	
-	private bindCurrentInterpolation(currentId: string, interpolation: string){
-		const currentObject: UnknownComponent = this;
-		
+	private bindCurrentInterpolation(currentId: string, memberName: string){
 		if(this.boundInterpolations[currentId] === undefined){
 			this.boundInterpolations[currentId] = [];
 		}
 
-		const memberName: string = interpolation.replace("}}", "").replace("{{", "");
 		this.boundInterpolations[currentId].push(memberName);
-		this.defineWatch(currentObject, memberName);
-		this.boundOverridenProperties[memberName].changeHandlers.push( () => this.reinterpolateNodeWithId(currentId) )
 	}
 
 	private getInterpolatedNodeId(node: Text, generator: IterableIterator<string>){
@@ -130,6 +135,9 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		
 		let nodeWithAttributes: HTMLElement;
 		while(nodeWithAttributes = <HTMLElement>nodeWithAttributesWalker.nextNode()){
+			if(this.components[nodeWithAttributes.nodeName.toLowerCase()] != undefined){
+				continue;
+			}
 			this.bindProperties(eventPrefix, nodeWithAttributes, this.bindEventProperty);
 			this.bindProperties(inputPrefix, nodeWithAttributes, this.bindInputProperty);
 		}
@@ -150,31 +158,26 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	}
 
 	private bindEventProperty(node: HTMLElement, property: Attr){
-		const currentComponent: UnknownComponent = this;
+		const currentComponent: UnknownProperties = this;
 		const eventName = property.name.replace("#", "");
 		const actionHandlerName = property.value;
 		node.addEventListener(eventName, () => currentComponent[actionHandlerName]() );
 	}
 
 	private bindInputProperty(node: HTMLElement, attrubute: Attr){
-		const currentComponent: UnknownComponent = this;
+		const currentComponent: UnknownProperties = this;
 		const nodeWithAnyProperty: any = <any>node;
-		let propertyName = attrubute.name.replace("$", "");
 		const memberName = attrubute.value;
-		this.defineWatch(currentComponent, memberName);
+		let propertyName = attrubute.name.replace("$", "");
 		
 		if( nodeWithAnyProperty[propertyName] == undefined ){
 			propertyName = this.getCamelCasePropertyName(propertyName, node);
 		}
 
 		if( nodeWithAnyProperty[propertyName] != undefined ){
-			nodeWithAnyProperty[propertyName] = currentComponent[memberName];
-		
-			const propertyChangedHandler = (value: any): void => {
-				nodeWithAnyProperty[propertyName] = value;
-			}
-
-			this.boundOverridenProperties[memberName].changeHandlers.push(propertyChangedHandler);
+			const observer: Observer = new PropertyObserver(nodeWithAnyProperty, propertyName);
+			observer.update( currentComponent[memberName] );
+			this.propertiesBinder.observe(currentComponent, memberName, observer);
 		}
 	}
 
@@ -211,8 +214,9 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	}
 
 	private replaceInterpolationsWithValue(boundMemberNames: string[], interpolatedNode: HTMLElement){
+		const currentObject: UnknownProperties = this;
 		for(const currentMemberName of boundMemberNames){
-			const newValue: string = this.boundOverridenProperties[currentMemberName].value;
+			const newValue: string = currentObject[currentMemberName];
 			for(const node of Array.from(interpolatedNode.childNodes)){
 				if(node.nodeType === node.TEXT_NODE){
 					const textNode: Text = <Text>node;
@@ -263,28 +267,8 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 		}
 	}
 
-	private createChildrenComponents(childrenNodes: NodeListOf<ChildNode>) {
-		childrenNodes.forEach((childNode: HTMLElement) => this.createChildComponent(childNode))
-	}
-
-	private createChildComponent(childNode: HTMLElement) {
-		if (childNode.childElementCount > 0) {
-			this.createChildrenComponents(childNode.childNodes);
-		}
-
-		const nodeName: string = childNode.tagName;
-		if (nodeName === undefined) {
-			return;
-		}
-
-		if (this.components.hasOwnProperty(nodeName.toLowerCase())) {
-			const ComponentConstructor: any = this.components[nodeName.toLowerCase()];
-			this.children.push(
-				new ComponentConstructor()
-					.setHostNode(childNode)
-					.injectComponents(this.components)
-			);
-		}
+	private createChildrenComponents() {
+		this.children = new ChildGenerator(this.components).generate(this.hostNode.childNodes);
 	}
 
 	private bindChildOutputs() {
@@ -303,7 +287,7 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 	private outputHandler(event: CustomEvent, handlerName: string) {
 		const eventFromChild = this.children.map(child => child.hostNode).indexOf(event.srcElement as HTMLElement) !== -1;
 		if (eventFromChild) {
-			const currentObject: UnknownComponent = this;
+			const currentObject: UnknownProperties = this;
 			if (!(currentObject[handlerName] instanceof Function)) {
 				throw new Error("Output handler is not defined");
 			}
@@ -313,48 +297,20 @@ export abstract class Component implements ComponentCore, UnknownComponent {
 
 	private bindChildInputs() {
 		const inputPrefix = '$';
-		const currentObject: UnknownComponent = this;
+		const currentObject: UnknownProperties = this;
 		for (const childWithAttributes of this.getChildsWithAttributes()) {
 			for (const inputAttributes of this.getNodeAttributesWithPrefix(inputPrefix, childWithAttributes.hostNode)) {
 				const childInputName = inputAttributes.name.substr(1);
 				const parentInputName = inputAttributes.value;
 
-				const updateChildValue = (value: any): void => {
-					childWithAttributes[childInputName] = value;
-				};
-				
-				updateChildValue(currentObject[parentInputName]);
-				this.defineWatch(currentObject, parentInputName);
-				this.boundOverridenProperties[parentInputName].changeHandlers.push( updateChildValue );
+				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);			
+				this.propertiesBinder.observe(currentObject, parentInputName, observer);
+				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);
 			}
 		}
 	}
-
-	private defineWatch(currentObject: UnknownComponent, varToWatch: string){
-		if(this.boundOverridenProperties[varToWatch] !== undefined){
-			return;
-		}
-
-		this.boundOverridenProperties[varToWatch] = {
-			value: null,
-			changeHandlers: []
-		}
-
-		const value = currentObject[varToWatch];
-		Object.defineProperty(currentObject, varToWatch, {
-			get: () => this.boundOverridenProperties[varToWatch].value,
-			set: (value: any) => {
-				this.boundOverridenProperties[varToWatch].value = value;
-				for(const changeHandler of this.boundOverridenProperties[varToWatch].changeHandlers){
-					changeHandler(value);
-				}
-			}
-		});
-		currentObject[varToWatch] = value;
-	}
-
-	private getChildsWithAttributes(): UnknownComponent[] {
+	private getChildsWithAttributes(): UnknownProperties[] {
 		return this.children.filter(child => child.hostNode.hasAttributes());
 	}
 

@@ -13,6 +13,11 @@ export class ComponentTestChild extends Component{
 		return `
 			<div>{{greeting}}</div>
 			<span>{{fromparent}}</span>
+			<button #click="eventCall"></button>
 		`
+	}
+
+	public eventCall(){
+		this.triggerOutput('fromchild', 'test-value');
 	}
 }
