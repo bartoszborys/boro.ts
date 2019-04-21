@@ -96,19 +96,24 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		
 		const currentId = this.getInterpolatedNodeId(node, generator);
 		node.parentElement.setAttribute(currentId, "");
-		
+		let interpolatedNode: Text = node;
 		for(const interpolation of interpolations){
 			const memberName: string = interpolation.replace("}}", "").replace("{{", "");
 			this.bindCurrentInterpolation(currentId, memberName);
 			const observer: Observer = {
 				update: (value: any)=>{
-					this.reinterpolateNodeWithId(currentId);
+					this.reinterpolateNodeWithId(currentId, memberName, value);
 				}
 			}
 			this.propertiesBinder.observe(this, memberName, observer);
+			interpolatedNode = this.splitByInterpolation(interpolatedNode, interpolation);
 		}
 	}
-	
+
+	private splitByInterpolation(node: Text, interpolation: string): Text{
+		return node.splitText( node.textContent.indexOf(interpolation) + interpolation.length );
+	}
+
 	private bindCurrentInterpolation(currentId: string, memberName: string){
 		if(this.boundInterpolations[currentId] === undefined){
 			this.boundInterpolations[currentId] = [];
@@ -189,17 +194,19 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		}
 	}
 
-	private reinterpolateNodeWithId(currentId: string){
-		const interpolatedClone: HTMLElement = this.getInterpolatedTemplateNodeClone(currentId);
+	private reinterpolateNodeWithId(currentId: string, propertyName: string, value: any){
+		const interpolatedClone: {node: Node, index: number} = this.getInterpolatedTemplateNodeClone(currentId, propertyName, value);
 		const currentView: HTMLElement = this.hostNode.querySelector(`[${currentId}]`);
 
 		if(currentView === null){
 			return;
 		}
-		this.replaceOnlyTextNodes(currentView, interpolatedClone);
+		
+		const replacer = currentView.childNodes.item(interpolatedClone.index);
+		currentView.replaceChild(interpolatedClone.node, replacer);
 	}
 
-	private getInterpolatedTemplateNodeClone(currentId: string): HTMLElement{
+	private getInterpolatedTemplateNodeClone(currentId: string, propertyName: string, value: any){
 		const templateNode: HTMLElement = this.template.querySelector(`[${currentId}]`);
 		
 		if(templateNode === null){
@@ -207,33 +214,19 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		}
 
 		const templateNodeClone: HTMLElement = <HTMLElement>templateNode.cloneNode(true);
-		const boundMembersNames: string[] = this.boundInterpolations[currentId];
-		this.replaceInterpolationsWithValue(boundMembersNames, templateNodeClone)
-		
-		return templateNodeClone;
+		return this.replaceInterpolationsWithValue(templateNodeClone, propertyName, value);
 	}
 
-	private replaceInterpolationsWithValue(boundMemberNames: string[], interpolatedNode: HTMLElement){
-		const currentObject: UnknownProperties = this;
-		for(const currentMemberName of boundMemberNames){
-			const newValue: string = currentObject[currentMemberName];
-			for(const node of Array.from(interpolatedNode.childNodes)){
-				if(node.nodeType === node.TEXT_NODE){
-					const textNode: Text = <Text>node;
-					textNode.textContent = textNode.textContent.replace(`{{${currentMemberName}}}`, newValue);
-				}
-			}
-		}
-	}
-
-	private replaceOnlyTextNodes(oldView: HTMLElement, newView: HTMLElement){
-		let oldViewCureentChild = <Node>oldView.firstChild;
-		for(let currentNode of Array.from(newView.childNodes)){
-			if(currentNode.nodeType === currentNode.TEXT_NODE){
-				oldView.replaceChild(currentNode, oldViewCureentChild);
-				oldViewCureentChild = currentNode.nextSibling;
-			}else{
-				oldViewCureentChild = oldViewCureentChild.nextSibling;
+	private replaceInterpolationsWithValue(interpolatedNode: HTMLElement, propertyName: string, value: any){
+		const children = Array.from(interpolatedNode.childNodes);
+		for(const node of children){
+			if(node.nodeType === node.TEXT_NODE && node.textContent.includes(propertyName)){
+				const textNode: Text = <Text>node;
+				textNode.textContent = textNode.textContent.replace(`{{${propertyName}}}`, value);
+				return {
+					node: textNode, 
+					index: children.indexOf(node)
+				};
 			}
 		}
 	}
@@ -245,8 +238,10 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	}
 
 	private updateAllInterpolations(){
-		for( const elementId of Object.keys(this.boundInterpolations)){
-			this.reinterpolateNodeWithId(elementId);
+		for( const members of Object.values(this.boundInterpolations)){
+			for(const memberName of members){
+				(<UnknownProperties>this)[memberName] = (<UnknownProperties>this)[memberName];
+			}
 		}
 	}
 
@@ -303,7 +298,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 				const childInputName = inputAttributes.name.substr(1);
 				const parentInputName = inputAttributes.value;
 
-				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);			
+				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);
 				this.propertiesBinder.observe(currentObject, parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);
