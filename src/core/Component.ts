@@ -7,6 +7,7 @@ import { ChildGenerator } from './lib/ChildGenerator';
 import { PropertiesBinder } from './lib/PropertiesBinder';
 import { PropertyObserver } from './lib/PropertyObserver';
 import { Observer } from './lib/Observer';
+import { InterpolationTemplate } from './types/InterpolationTemplate';
 
 export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
@@ -19,7 +20,6 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	private components: RegisteredComponents;
 	private boundInterpolations: BoundInterpolations;
 	private children: Array<UnknownProperties>;
-	private template: HTMLElement;
 
 	protected triggerOutput: (outputName: string, valueToEmitt: any) => void = (name: string, value: any) => {
 		this.hostNode.dispatchEvent(new CustomEvent(name, { detail: value }));
@@ -47,9 +47,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 
 	public render() {
 		this.generateTemplate();
-		this.cleanUp();
 		this.onInitialize();
-		this.insertTemplate();
 		this.bindDomElementProperties();
 		this.createChildrenComponents();
 		this.bindChildOutputs();
@@ -59,78 +57,56 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		return this;
 	}
 
-	private *getComponentIdGenerator(){
-		let currentId = 0;
-		while(true){
-			currentId++;
-			yield `${this.getComponentIdPrefix()}${currentId}`;
-		}
-	}
-
-	private getComponentIdPrefix(){
-		return 'boro-element-';
-	}
-
 	private generateTemplate(): void{
-		this.template = <HTMLElement>this.hostNode.cloneNode(false);
-		this.template.innerHTML = this.getTemplate();
+		this.hostNode.innerHTML = this.getTemplate();
 		this.bindTemplateInterpolations();
 	}
 	
 	private bindTemplateInterpolations(): void{
-		const nodes: TreeWalker = document.createTreeWalker(this.template, NodeFilter.SHOW_TEXT);
-		const generator = this.getComponentIdGenerator();
-		
+		const nodes: TreeWalker = document.createTreeWalker(this.hostNode, NodeFilter.SHOW_TEXT);
 		let node: Text = null;
 		while(node = <Text>nodes.nextNode()){
-			this.bindTextNodeInterpolations(node, generator)
-		}
-	}
-
-	private bindTextNodeInterpolations(node: Text, generator: IterableIterator<string>){
-		const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
-
-		if(interpolations === null){
-			return;
-		}
-		
-		const currentId = this.getInterpolatedNodeId(node, generator);
-		node.parentElement.setAttribute(currentId, "");
-		let interpolatedNode: Text = node;
-		for(const interpolation of interpolations){
-			const memberName: string = interpolation.replace("}}", "").replace("{{", "");
-			this.bindCurrentInterpolation(currentId, memberName);
-			const observer: Observer = {
-				update: (value: any)=>{
-					this.reinterpolateNodeWithId(currentId, memberName, value);
-				}
+			const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
+			if(interpolations === null){
+				continue;
 			}
-			this.propertiesBinder.observe(this, memberName, observer);
-			interpolatedNode = this.splitByInterpolation(interpolatedNode, interpolation);
+			let interpolatedNode: Text = node;
+			for(const interpolation of interpolations){
+				interpolatedNode = this.splitByInterpolation(interpolatedNode, interpolation);
+			}
+		}
+
+		while(node = <Text>nodes.previousNode()){
+			const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
+			if(interpolations === null){
+				continue;
+			}
+			for(const interpolation of interpolations){
+				const memberName: string = interpolation.replace("}}", "").replace("{{", "");
+				if(this.boundInterpolations[memberName] == undefined){
+					this.boundInterpolations[memberName] = [];
+				}
+				this.boundInterpolations[memberName].push({
+					node: node,
+					template: node.textContent
+				});
+
+				const observer: Observer = {
+					update: (value: any)=>{
+						this.boundInterpolations[memberName].forEach( (item: InterpolationTemplate) =>{
+							item.node.textContent = item.template.replace(/{{[a-zA-Z0-9]+}}/g, value);
+						})
+					}
+				}
+				const object = <UnknownProperties>this;
+				this.propertiesBinder.observe(this, memberName, observer);
+				observer.update(object[memberName]);
+			}
 		}
 	}
 
 	private splitByInterpolation(node: Text, interpolation: string): Text{
 		return node.splitText( node.textContent.indexOf(interpolation) + interpolation.length );
-	}
-
-	private bindCurrentInterpolation(currentId: string, memberName: string){
-		if(this.boundInterpolations[currentId] === undefined){
-			this.boundInterpolations[currentId] = [];
-		}
-
-		this.boundInterpolations[currentId].push(memberName);
-	}
-
-	private getInterpolatedNodeId(node: Text, generator: IterableIterator<string>){
-		const currentNodeAttributes = this.getNodeAttributesWithPrefix(this.getComponentIdPrefix(), node.parentElement);
-		const attributesCount = currentNodeAttributes.length;
-		
-		if(attributesCount > 1){
-			throw new Error('Node has more than 1 boro attribute');
-		}
-	
-		return (attributesCount == 1) ? currentNodeAttributes.pop().name : `${generator.next().value}`;
 	}
 
 	private bindDomElementProperties(): void{
@@ -191,74 +167,6 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 			if(property.toLowerCase() == searchedProperty.toLowerCase()){
 				return property;
 			}
-		}
-	}
-
-	private reinterpolateNodeWithId(currentId: string, propertyName: string, value: any){
-		const interpolatedClone: {node: Node, index: number} = this.getInterpolatedTemplateNodeClone(currentId, propertyName, value);
-		const currentView: HTMLElement = this.hostNode.querySelector(`[${currentId}]`);
-
-		if(currentView === null){
-			return;
-		}
-		
-		const replacer = currentView.childNodes.item(interpolatedClone.index);
-		currentView.replaceChild(interpolatedClone.node, replacer);
-	}
-
-	private getInterpolatedTemplateNodeClone(currentId: string, propertyName: string, value: any){
-		const templateNode: HTMLElement = this.template.querySelector(`[${currentId}]`);
-		
-		if(templateNode === null){
-			return;
-		}
-
-		const templateNodeClone: HTMLElement = <HTMLElement>templateNode.cloneNode(true);
-		return this.replaceInterpolationsWithValue(templateNodeClone, propertyName, value);
-	}
-
-	private replaceInterpolationsWithValue(interpolatedNode: HTMLElement, propertyName: string, value: any){
-		const children = Array.from(interpolatedNode.childNodes);
-		for(const node of children){
-			if(node.nodeType === node.TEXT_NODE && node.textContent.includes(propertyName)){
-				const textNode: Text = <Text>node;
-				textNode.textContent = textNode.textContent.replace(`{{${propertyName}}}`, value);
-				return {
-					node: textNode, 
-					index: children.indexOf(node)
-				};
-			}
-		}
-	}
-
-	private insertTemplate(): any {
-		const clonedTemplate = <HTMLElement>this.template.cloneNode(true);
-		this.insertToHostNode(clonedTemplate.childNodes);
-		this.updateAllInterpolations();
-	}
-
-	private updateAllInterpolations(){
-		for( const members of Object.values(this.boundInterpolations)){
-			for(const memberName of members){
-				(<UnknownProperties>this)[memberName] = (<UnknownProperties>this)[memberName];
-			}
-		}
-	}
-
-	private insertToHostNode(children: NodeListOf<ChildNode>){
-		for( const node of Array.from(children) ){
-			this.hostNode.appendChild( node );
-		}
-	}
-
-	private cleanUp(){
-		this.children.splice(0, this.children.length);
-		this.emptyChildNodes();
-	}
-
-	private emptyChildNodes(){
-		while (this.hostNode.firstChild) {
-			this.hostNode.removeChild(this.hostNode.firstChild);
 		}
 	}
 

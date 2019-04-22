@@ -1,3 +1,5 @@
+import { InterpolationTemplate } from "./InterpolationTemplate";
+
 export interface BoundInterpolations{
-    [key: string] : string[]
+	[key: string] : InterpolationTemplate[]
 }
