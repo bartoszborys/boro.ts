@@ -73,15 +73,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 			let interpolatedNode: Text = node;
 			for(const interpolation of interpolations){
 				interpolatedNode = this.splitByInterpolation(interpolatedNode, interpolation);
-			}
-		}
-
-		while(node = <Text>nodes.previousNode()){
-			const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
-			if(interpolations === null){
-				continue;
-			}
-			for(const interpolation of interpolations){
+				
 				const memberName: string = interpolation.replace("}}", "").replace("{{", "");
 				if(this.boundInterpolations[memberName] == undefined){
 					this.boundInterpolations[memberName] = [];
