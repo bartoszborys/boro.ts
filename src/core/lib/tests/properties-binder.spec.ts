@@ -9,7 +9,7 @@ class MockObserver implements Observer{
 	}
 }
 const mockObject = { "propOne": 12 }
-const testedObject = new PropertiesBinder();
+const testedObject = new PropertiesBinder(mockObject);
 
 test('Without observer', ()=>{
 	const expectedValue = 13;
@@ -20,7 +20,7 @@ test('Without observer', ()=>{
 test('One observer', ()=>{
 	const observer = new MockObserver();
 	observer.testingElement = jest.fn();
-	testedObject.observe(mockObject, "propOne", observer);
+	testedObject.observe("propOne", observer);
 	mockObject.propOne = 13;
 	expect(observer.testingElement).toBeCalled();
 })
@@ -30,8 +30,8 @@ test('More observers', ()=>{
 	const anotherObserver = new MockObserver();
 	observer.testingElement = jest.fn();
 	anotherObserver.testingElement = jest.fn();
-	testedObject.observe(mockObject, "propOne", observer);
-	testedObject.observe(mockObject, "propOne", anotherObserver);
+	testedObject.observe("propOne", observer);
+	testedObject.observe("propOne", anotherObserver);
 	mockObject.propOne = 13;
 	expect(observer.testingElement).toBeCalled();
 	expect(anotherObserver.testingElement).toBeCalled();

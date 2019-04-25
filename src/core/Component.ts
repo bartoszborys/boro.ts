@@ -28,7 +28,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	public constructor() {
 		this.children = [];
 		this.boundInterpolations = {};
-		this.propertiesBinder = new PropertiesBinder();
+		this.propertiesBinder = new PropertiesBinder(this);
 	}
 
 	public setHostNode(_hostNode: HTMLElement) {
@@ -91,7 +91,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 					}
 				}
 				const object = <UnknownProperties>this;
-				this.propertiesBinder.observe(this, memberName, observer);
+				this.propertiesBinder.observe(memberName, observer);
 				observer.update(object[memberName]);
 			}
 		}
@@ -150,7 +150,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		if( nodeWithAnyProperty[propertyName] != undefined ){
 			const observer: Observer = new PropertyObserver(nodeWithAnyProperty, propertyName);
 			observer.update( currentComponent[memberName] );
-			this.propertiesBinder.observe(currentComponent, memberName, observer);
+			this.propertiesBinder.observe(memberName, observer);
 		}
 	}
 
@@ -199,7 +199,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 				const parentInputName = inputAttributes.value;
 
 				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);
-				this.propertiesBinder.observe(currentObject, parentInputName, observer);
+				this.propertiesBinder.observe(parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);
 			}

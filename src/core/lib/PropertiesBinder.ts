@@ -3,19 +3,20 @@ import { OverriddenProperties } from "../types/OverriddenProperties";
 import { Observer } from "./Observer";
 
 export class PropertiesBinder{
-	public constructor(private boundProperties: OverriddenProperties = {}){};
+	private boundProperties: OverriddenProperties = {};
+	public constructor(private object: UnknownProperties){};
 
-	public observe(object: UnknownProperties, propertyName: string, observer: Observer): void{
-		this.bindProperty(object, propertyName);
+	public observe(propertyName: string, observer: Observer): void{
+		this.bindProperty(propertyName);
 		this.boundProperties[propertyName].changeHandlers.push(observer.update.bind(observer));
 	}
 
-	private bindProperty(object: UnknownProperties, propertyName: string){
+	private bindProperty(propertyName: string){
 		if(this.boundProperties[propertyName] !== undefined){
 			return;
 		}
 		this.initializeProperty(propertyName);
-		this.bindProxy(object, propertyName);
+		this.bindProxy(propertyName);
 	}
 
 	private initializeProperty(propertyName: string){
@@ -25,9 +26,9 @@ export class PropertiesBinder{
 		}
 	}
 
-	private bindProxy(object: UnknownProperties, propertyName: string) {
-		const value = object[propertyName];
-		Object.defineProperty(object, propertyName, {
+	private bindProxy(propertyName: string) {
+		const value = this.object[propertyName];
+		Object.defineProperty(this.object, propertyName, {
 			get: () => this.boundProperties[propertyName].value,
 			set: (value: any) => {
 				this.boundProperties[propertyName].value = value;
@@ -36,6 +37,6 @@ export class PropertiesBinder{
 				}
 			}
 		});
-		object[propertyName] = value;
+		this.object[propertyName] = value;
 	}
 }
