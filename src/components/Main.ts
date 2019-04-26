@@ -22,7 +22,7 @@ export class Main extends Component{
 			<div style="display: block; background: #7fff83; padding: 5px;">
 				<div>Main component</div>
 				<h1>{{header}} -> {{anotherHeaderPart}}</h1>
-				<h2>{{firstComponentTitle}}, Counter = <span style="color: red">{{firstCounter}}</span></h2>
+				<h2>{{firstComponentTitle}} -> {{firstComponentTitle}}, Counter = <span style="color: red">{{firstCounter}}</span></h2>
 				<user-table style="display: block; background: #a7a7e6;" #parenttitle="firstComponentTitleChange" #plus="increaseFirstCounter" #minus="decreaseFirstCounter" $input="firstCounter" $title="firstComponentTitle"></user-table>
 				<div style="display:flex; flex-direction: column;">
 					<input $disabled="disable" #input="changePower" $value="power" type="number" class="power"/>
@@ -32,14 +32,20 @@ export class Main extends Component{
 						<span>=</span> 
 						<span>{{powerValue}}</span>
 					</span>
-					<div #click="call_boro">Current power: {{power}}</div>
+					<div boro-id="power" #mouseover="over" #mouseout="out">Current power: {{power}}</div>
 				</div>
 			</div>
 		`
 	}
 
-	call_boro(){
-		alert('Current powa');
+	public over(){
+		const element = this.hostNode.querySelector('[boro-id="power"]') as HTMLElement
+		element.style.background = "red";
+	}
+
+	public out(){
+		const element = this.hostNode.querySelector('[boro-id="power"]') as HTMLElement
+		element.style.background = "green";
 	}
 	
 	public disable = false;

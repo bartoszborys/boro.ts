@@ -43,7 +43,6 @@ test('Second level child generated', ()=>{
 test('First child interpolated correctly', ()=>{
 	const hostNode = document.createElement('test');
 	getTestedInstance(hostNode).render();
-	expect(hostNode.children.item(0).hasAttribute('boro-element-1')).toBeTruthy()
 	expect(hostNode.children.item(0).textContent).toBe('Hello world!');
 })
 

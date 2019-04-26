@@ -1,11 +1,11 @@
 import { RegisteredComponents } from "../types/RegisteredComponents";
-import { UnknownProperties } from "../types/UnknownProperties";
+import { Component } from "../Component";
 
 export class ChildGenerator{
-	private children: Array<UnknownProperties>;
+	private children: Array<Component>;
 	public constructor(private components: RegisteredComponents){}
 
-	public generate(childrenNodes: NodeListOf<ChildNode>): Array<UnknownProperties>{
+	public generate(childrenNodes: NodeListOf<ChildNode>): Array<Component>{
 		this.children = [];
 		this.createChildrenComponents(childrenNodes);
 		return this.children;

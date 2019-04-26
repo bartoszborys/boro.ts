@@ -1,7 +1,7 @@
 import { PropertiesBinder } from '../PropertiesBinder';
 import { Observer } from '../Observer';
 
-class MockObserver implements Observer<number>{
+class MockObserver implements Observer{
 	public testingElement: jest.Mock<any, any>;
 
 	public update(value: number): void {
@@ -9,7 +9,7 @@ class MockObserver implements Observer<number>{
 	}
 }
 const mockObject = { "propOne": 12 }
-const testedObject = new PropertiesBinder();
+const testedObject = new PropertiesBinder(mockObject);
 
 test('Without observer', ()=>{
 	const expectedValue = 13;
@@ -20,7 +20,7 @@ test('Without observer', ()=>{
 test('One observer', ()=>{
 	const observer = new MockObserver();
 	observer.testingElement = jest.fn();
-	testedObject.observe(mockObject, "propOne", observer);
+	testedObject.addObserver("propOne", observer);
 	mockObject.propOne = 13;
 	expect(observer.testingElement).toBeCalled();
 })
@@ -30,8 +30,8 @@ test('More observers', ()=>{
 	const anotherObserver = new MockObserver();
 	observer.testingElement = jest.fn();
 	anotherObserver.testingElement = jest.fn();
-	testedObject.observe(mockObject, "propOne", observer);
-	testedObject.observe(mockObject, "propOne", anotherObserver);
+	testedObject.addObserver("propOne", observer);
+	testedObject.addObserver("propOne", anotherObserver);
 	mockObject.propOne = 13;
 	expect(observer.testingElement).toBeCalled();
 	expect(anotherObserver.testingElement).toBeCalled();
