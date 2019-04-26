@@ -20,7 +20,7 @@ test('Without observer', ()=>{
 test('One observer', ()=>{
 	const observer = new MockObserver();
 	observer.testingElement = jest.fn();
-	testedObject.observe("propOne", observer);
+	testedObject.addObserver("propOne", observer);
 	mockObject.propOne = 13;
 	expect(observer.testingElement).toBeCalled();
 })
@@ -30,8 +30,8 @@ test('More observers', ()=>{
 	const anotherObserver = new MockObserver();
 	observer.testingElement = jest.fn();
 	anotherObserver.testingElement = jest.fn();
-	testedObject.observe("propOne", observer);
-	testedObject.observe("propOne", anotherObserver);
+	testedObject.addObserver("propOne", observer);
+	testedObject.addObserver("propOne", anotherObserver);
 	mockObject.propOne = 13;
 	expect(observer.testingElement).toBeCalled();
 	expect(anotherObserver.testingElement).toBeCalled();

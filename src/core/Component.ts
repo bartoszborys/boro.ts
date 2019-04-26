@@ -8,6 +8,7 @@ import { PropertiesBinder } from './lib/PropertiesBinder';
 import { PropertyObserver } from './lib/PropertyObserver';
 import { Observer } from './lib/Observer';
 import { InterpolationTemplate } from './types/InterpolationTemplate';
+import { PropertyObservable } from './types/PropertyObservable';
 
 export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
@@ -16,10 +17,10 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	protected abstract getTemplate(): string;
 	protected abstract readonly config: ComponentConfig;
 	
-	private propertiesBinder: PropertiesBinder;
+	private propertiesBinder: PropertyObservable;
 	private components: RegisteredComponents;
 	private boundInterpolations: BoundInterpolations;
-	private children: Array<UnknownProperties>;
+	private children: Array<Component>;
 
 	protected triggerOutput: (outputName: string, valueToEmitt: any) => void = (name: string, value: any) => {
 		this.hostNode.dispatchEvent(new CustomEvent(name, { detail: value }));
@@ -64,37 +65,55 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	
 	private bindTemplateInterpolations(): void{
 		const nodes: TreeWalker = document.createTreeWalker(this.hostNode, NodeFilter.SHOW_TEXT);
-		let node: Text = null;
-		while(node = <Text>nodes.nextNode()){
-			const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
-			if(interpolations === null){
-				continue;
-			}
-			let interpolatedNode: Text = node;
-			for(const interpolation of interpolations){
-				interpolatedNode = this.splitByInterpolation(interpolatedNode, interpolation);
-				
-				const memberName: string = interpolation.replace("}}", "").replace("{{", "");
-				if(this.boundInterpolations[memberName] == undefined){
-					this.boundInterpolations[memberName] = [];
-				}
-				this.boundInterpolations[memberName].push({
-					node: node,
-					template: node.textContent
-				});
+		let currentNode: Text = null;
+		while(currentNode = <Text>nodes.nextNode()){
+			this.bindTextInterpolations(currentNode);
+		}
+	}
 
-				const observer: Observer = {
-					update: (value: any)=>{
-						this.boundInterpolations[memberName].forEach( (item: InterpolationTemplate) =>{
-							item.node.textContent = item.template.replace(/{{[a-zA-Z0-9]+}}/g, value);
-						})
-					}
-				}
-				const object = <UnknownProperties>this;
-				this.propertiesBinder.observe(memberName, observer);
-				observer.update(object[memberName]);
+	private bindTextInterpolations(node: Text){
+		const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
+		if(interpolations === null){
+			return;
+		}
+
+		let currentNode: Text = node;
+		for(const interpolation of interpolations){
+			const splittedNode = this.splitByInterpolation(currentNode, interpolation);
+			const memberName: string = interpolation.replace("}}", "").replace("{{", "");
+
+			this.initializeInterpolation(memberName);
+			this.addInterpolation(memberName, currentNode);
+			this.addInterpolationObserver(memberName);
+
+			currentNode = splittedNode;
+		}
+	}
+
+	private initializeInterpolation(memberName: string){
+		if(this.boundInterpolations[memberName] == undefined){
+			this.boundInterpolations[memberName] = [];
+		}
+	}
+
+	private addInterpolation(memberName: string, interpolatedNode: Text) {
+		this.boundInterpolations[memberName].push({
+			node: interpolatedNode,
+			template: interpolatedNode.textContent
+		});
+	}
+
+	private addInterpolationObserver(memberName: string) {
+		const observer: Observer = {
+			update: (value: any)=>{
+				this.boundInterpolations[memberName].forEach( (item: InterpolationTemplate) =>{
+					item.node.textContent = item.template.replace(/{{[a-zA-Z0-9]+}}/g, value);
+				})
 			}
 		}
+
+		this.propertiesBinder.addObserver(memberName, observer);
+		observer.update( (<UnknownProperties>this)[memberName] );
 	}
 
 	private splitByInterpolation(node: Text, interpolation: string): Text{
@@ -150,7 +169,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		if( nodeWithAnyProperty[propertyName] != undefined ){
 			const observer: Observer = new PropertyObserver(nodeWithAnyProperty, propertyName);
 			observer.update( currentComponent[memberName] );
-			this.propertiesBinder.observe(memberName, observer);
+			this.propertiesBinder.addObserver(memberName, observer);
 		}
 	}
 
@@ -199,14 +218,14 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 				const parentInputName = inputAttributes.value;
 
 				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);
-				this.propertiesBinder.observe(parentInputName, observer);
+				this.propertiesBinder.addObserver(parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
 				childWithAttributes.hostNode.removeAttribute(`${inputPrefix}${childInputName}`);
 			}
 		}
 	}
-	private getChildsWithAttributes(): UnknownProperties[] {
-		return this.children.filter(child => child.hostNode.hasAttributes());
+	private getChildsWithAttributes(): Component[] {
+		return this.children.filter(child => child.hostNode.hasAttributes()) as Component[];
 	}
 
 	private getNodeAttributesWithPrefix(prefix: string, hostNode: HTMLElement): Attr[] {

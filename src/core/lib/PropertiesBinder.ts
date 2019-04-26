@@ -1,12 +1,13 @@
 import { UnknownProperties } from "../types/UnknownProperties";
 import { OverriddenProperties } from "../types/OverriddenProperties";
 import { Observer } from "./Observer";
+import { PropertyObservable } from "../types/PropertyObservable";
 
-export class PropertiesBinder{
+export class PropertiesBinder implements PropertyObservable{
 	private boundProperties: OverriddenProperties = {};
 	public constructor(private object: UnknownProperties){};
-
-	public observe(propertyName: string, observer: Observer): void{
+	
+	public addObserver(propertyName: string, observer: Observer): void {
 		this.bindProperty(propertyName);
 		this.boundProperties[propertyName].changeHandlers.push(observer.update.bind(observer));
 	}
