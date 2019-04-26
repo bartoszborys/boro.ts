@@ -1,14 +1,14 @@
 import { ComponentConfig } from './types/ComponentConfig';
 import { ComponentCore } from './types/ComponentCore';
 import { UnknownProperties } from './types/UnknownProperties';
-import { BoundInterpolations } from './types/BoundInterpolations';
 import { RegisteredComponents } from './types/RegisteredComponents';
 import { ChildGenerator } from './lib/ChildGenerator';
 import { PropertiesBinder } from './lib/PropertiesBinder';
 import { PropertyObserver } from './lib/PropertyObserver';
 import { Observer } from './lib/Observer';
-import { InterpolationTemplate } from './types/InterpolationTemplate';
 import { PropertyObservable } from './types/PropertyObservable';
+import { InterpolationObserversFactory } from './lib/InterpolationObserversFactory';
+import { InterpolationFactory } from './lib/InterpolationFactory';
 
 export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
@@ -17,9 +17,9 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	protected abstract getTemplate(): string;
 	protected abstract readonly config: ComponentConfig;
 	
+	private interpolationFactory: InterpolationFactory;
 	private propertiesBinder: PropertyObservable;
 	private components: RegisteredComponents;
-	private boundInterpolations: BoundInterpolations;
 	private children: Array<Component>;
 
 	protected triggerOutput: (outputName: string, valueToEmitt: any) => void = (name: string, value: any) => {
@@ -28,8 +28,8 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 
 	public constructor() {
 		this.children = [];
-		this.boundInterpolations = {};
 		this.propertiesBinder = new PropertiesBinder(this);
+		this.interpolationFactory = new InterpolationObserversFactory();
 	}
 
 	public setHostNode(_hostNode: HTMLElement) {
@@ -67,55 +67,26 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		const nodes: TreeWalker = document.createTreeWalker(this.hostNode, NodeFilter.SHOW_TEXT);
 		let currentNode: Text = null;
 		while(currentNode = <Text>nodes.nextNode()){
-			this.bindTextInterpolations(currentNode);
+			this.bindTextNodeInterpolation(currentNode);
 		}
 	}
 
-	private bindTextInterpolations(node: Text){
-		const interpolations: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/g);
-		if(interpolations === null){
+	private bindTextNodeInterpolation(node: Text){
+		const interpolationMatch: string[] = node.nodeValue.match(/{{[a-zA-Z0-9]+}}/);
+		if(interpolationMatch === null){
 			return;
 		}
+		const interpolation = interpolationMatch[0];
+		this.splitByInterpolation(node, interpolation);
 
-		let currentNode: Text = node;
-		for(const interpolation of interpolations){
-			const splittedNode = this.splitByInterpolation(currentNode, interpolation);
-			const memberName: string = interpolation.replace("}}", "").replace("{{", "");
-
-			this.initializeInterpolation(memberName);
-			this.addInterpolation(memberName, currentNode);
-			this.addInterpolationObserver(memberName);
-
-			currentNode = splittedNode;
+		const memberName: string = interpolation.replace("}}", "").replace("{{", "");
+		const observer: Observer | null = this.interpolationFactory.get(node, memberName);
+		if(observer !== null){
+			observer.update( (<UnknownProperties>this)[memberName] );
+			this.propertiesBinder.addObserver(memberName, observer);
 		}
 	}
-
-	private initializeInterpolation(memberName: string){
-		if(this.boundInterpolations[memberName] == undefined){
-			this.boundInterpolations[memberName] = [];
-		}
-	}
-
-	private addInterpolation(memberName: string, interpolatedNode: Text) {
-		this.boundInterpolations[memberName].push({
-			node: interpolatedNode,
-			template: interpolatedNode.textContent
-		});
-	}
-
-	private addInterpolationObserver(memberName: string) {
-		const observer: Observer = {
-			update: (value: any)=>{
-				this.boundInterpolations[memberName].forEach( (item: InterpolationTemplate) =>{
-					item.node.textContent = item.template.replace(/{{[a-zA-Z0-9]+}}/g, value);
-				})
-			}
-		}
-
-		this.propertiesBinder.addObserver(memberName, observer);
-		observer.update( (<UnknownProperties>this)[memberName] );
-	}
-
+	
 	private splitByInterpolation(node: Text, interpolation: string): Text{
 		return node.splitText( node.textContent.indexOf(interpolation) + interpolation.length );
 	}
