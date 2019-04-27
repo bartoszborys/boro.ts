@@ -2,14 +2,16 @@ import { UnknownProperties } from "../types/UnknownProperties";
 import { OverriddenProperties } from "../types/OverriddenProperties";
 import { Observer } from "./Observer";
 import { PropertyObservable } from "../types/PropertyObservable";
+import { PropertyResolver } from "./PropertyResolver";
 
 export class PropertiesBinder implements PropertyObservable{
 	private boundProperties: OverriddenProperties = {};
 	public constructor(private object: UnknownProperties){};
 	
 	public addObserver(propertyName: string, observer: Observer): void {
-		this.bindProperty(propertyName);
-		this.boundProperties[propertyName].changeHandlers.push(observer.update.bind(observer));
+		const realPropertyName = new PropertyResolver(this.object).getResolvedName(propertyName);
+		this.bindProperty(realPropertyName);
+		this.boundProperties[realPropertyName].changeHandlers.push(observer.update.bind(observer));
 	}
 
 	private bindProperty(propertyName: string){

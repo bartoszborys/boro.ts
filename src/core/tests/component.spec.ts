@@ -1,11 +1,15 @@
 import { ComponentTest } from './ComponentTest';
 import { ComponentRegistrator } from '../ComponentsRegistrator';
 import { ComponentTestChild } from './ComponentTestChild';
+import { NotExistsInputPropertyComponent } from './NotExistsInputPropertyComponent';
+import { NotExistsOutputPropertyComponent } from './NotExistsOutputPropertyComponent';
 
 const componentRegistrator: ComponentRegistrator = new ComponentRegistrator();
 componentRegistrator.register([
 	ComponentTest,
-	ComponentTestChild
+	ComponentTestChild,
+	NotExistsInputPropertyComponent,
+	NotExistsOutputPropertyComponent
 ]);
 
 function getTestedInstance(hostNode: HTMLElement): ComponentTest{
@@ -67,9 +71,30 @@ test('Output property bound correctly', ()=>{
 test('Input property bound correctly', ()=>{
 	const hostNode = document.createElement('test');
 	const testedComponent = getTestedInstance(hostNode).render();
-
+	
 	const buttonName = ( <HTMLInputElement>hostNode.querySelector('input') ).value
 	expect(buttonName).toBe(testedComponent.inputDescribeText);
+})
+
+test('Should not bind unset input property', ()=>{
+	const hostNode = document.createElement('test');
+	expect( 
+		() => new NotExistsInputPropertyComponent()
+			.injectComponents( componentRegistrator.get() )
+			.setHostNode(hostNode)
+			.render() 
+	).toThrowError("Unknown object property >> 'notexistinput'.")
+})
+
+test('Should not bind unset output property', ()=>{
+	const hostNode = document.createElement('test');
+	return;
+	expect( 
+		() => new NotExistsOutputPropertyComponent()
+			.injectComponents( componentRegistrator.get() )
+			.setHostNode(hostNode)
+			.render() 
+	).toThrowError("Unknown object property >> 'notexistoutput'.")
 })
 
 test('Child generated', ()=>{

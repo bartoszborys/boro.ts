@@ -9,6 +9,7 @@ import { Observer } from './lib/Observer';
 import { PropertyObservable } from './types/PropertyObservable';
 import { InterpolationObserversFactory } from './lib/InterpolationObserversFactory';
 import { InterpolationFactory } from './lib/InterpolationFactory';
+import { PropertyResolver } from './lib/PropertyResolver';
 
 export abstract class Component implements ComponentCore, UnknownProperties {
 	protected hostNode: HTMLElement;
@@ -124,7 +125,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		const currentComponent: UnknownProperties = this;
 		const eventName = property.name.replace("#", "");
 		const actionHandlerName = property.value;
-		node.addEventListener(eventName, () => currentComponent[actionHandlerName]() );
+		node.addEventListener(eventName, () => (<UnknownProperties>this)[actionHandlerName]() );
 	}
 
 	private bindInputProperty(node: HTMLElement, attrubute: Attr){
@@ -158,13 +159,14 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 
 	private bindChildOutputs() {
 		const outputPrefix = '#';
-		const childrenHostNodes: HTMLElement[] = this.getChildsWithAttributes().map(child => child.hostNode);
-		for (const childHostNode of childrenHostNodes) {
-			for (const outputAttributes of this.getNodeAttributesWithPrefix(outputPrefix, childHostNode)) {
+		const children: Component[] = this.getChildsWithAttributes();
+		for (const child of children) {
+			for (const outputAttributes of this.getNodeAttributesWithPrefix(outputPrefix, child.hostNode)) {
 				const outputName: string = outputAttributes.name.substr(1);
 				const handlerName: string = outputAttributes.value;
-				childHostNode.addEventListener(outputName, (event: CustomEvent) => this.outputHandler(event, handlerName));
-				childHostNode.removeAttribute(`${outputPrefix}${outputName}`);
+				const resolvedOutputName = outputName//new PropertyResolver(child).getResolvedName(outputName);
+				child.hostNode.addEventListener(resolvedOutputName, (event: CustomEvent) => this.outputHandler(event, handlerName));
+				child.hostNode.removeAttribute(`${outputPrefix}${resolvedOutputName}`);
 			}
 		}
 	}
@@ -173,10 +175,11 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		const eventFromChild = this.children.map(child => child.hostNode).indexOf(event.srcElement as HTMLElement) !== -1;
 		if (eventFromChild) {
 			const currentObject: UnknownProperties = this;
-			if (!(currentObject[handlerName] instanceof Function)) {
+			const resolvedHandlerName = new PropertyResolver(currentObject).getResolvedName(handlerName);
+			if (!(currentObject[resolvedHandlerName] instanceof Function)) {
 				throw new Error("Output handler is not defined");
 			}
-			currentObject[handlerName](event.detail);
+			currentObject[resolvedHandlerName](event.detail);
 		}
 	}
 
@@ -185,9 +188,9 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 		const currentObject: UnknownProperties = this;
 		for (const childWithAttributes of this.getChildsWithAttributes()) {
 			for (const inputAttributes of this.getNodeAttributesWithPrefix(inputPrefix, childWithAttributes.hostNode)) {
-				const childInputName = inputAttributes.name.substr(1);
+				const childInputName = new PropertyResolver(childWithAttributes).getResolvedName( inputAttributes.name.substr(1) );
 				const parentInputName = inputAttributes.value;
-
+				
 				const observer: Observer = new PropertyObserver(childWithAttributes, childInputName);
 				this.propertiesBinder.addObserver(parentInputName, observer);
 				observer.update(currentObject[parentInputName]);
