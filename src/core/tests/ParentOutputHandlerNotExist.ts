@@ -1,16 +1,14 @@
 import { Component } from "../Component";
 import { ComponentConfig } from "../types/ComponentConfig";
 
-export class NotExistsInputPropertyComponent extends Component{
+export class ParentOutputHandlerNotExist extends Component{
 	protected config: ComponentConfig ={
-		name: "not-exist-input-property"
+		name: "parent-output-handler-not-exist"
 	};
 
 	protected getTemplate(): string {
 		return `
-			<component-test-child $notExistInput="outHandler"></component-test-child>
+			<component-test-child #notExistOutput="outHandler"></component-test-child>
 		`
 	}
-
-	outHandler(){}
 }

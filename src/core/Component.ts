@@ -122,14 +122,12 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 	}
 
 	private bindEventProperty(node: HTMLElement, property: Attr){
-		const currentComponent: UnknownProperties = this;
 		const eventName = property.name.replace("#", "");
 		const actionHandlerName = property.value;
 		node.addEventListener(eventName, () => (<UnknownProperties>this)[actionHandlerName]() );
 	}
 
 	private bindInputProperty(node: HTMLElement, attrubute: Attr){
-		const currentComponent: UnknownProperties = this;
 		const nodeWithAnyProperty: any = <any>node;
 		const memberName = attrubute.value;
 		let propertyName = attrubute.name.replace("$", "");
@@ -140,7 +138,7 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 
 		if( nodeWithAnyProperty[propertyName] != undefined ){
 			const observer: Observer = new PropertyObserver(nodeWithAnyProperty, propertyName);
-			observer.update( currentComponent[memberName] );
+			observer.update( (<UnknownProperties>this)[memberName] );
 			this.propertiesBinder.addObserver(memberName, observer);
 		}
 	}
@@ -164,22 +162,23 @@ export abstract class Component implements ComponentCore, UnknownProperties {
 			for (const outputAttributes of this.getNodeAttributesWithPrefix(outputPrefix, child.hostNode)) {
 				const outputName: string = outputAttributes.name.substr(1);
 				const handlerName: string = outputAttributes.value;
-				const resolvedOutputName = outputName//new PropertyResolver(child).getResolvedName(outputName);
-				child.hostNode.addEventListener(resolvedOutputName, (event: CustomEvent) => this.outputHandler(event, handlerName));
-				child.hostNode.removeAttribute(`${outputPrefix}${resolvedOutputName}`);
+				
+				if (!((<UnknownProperties>this)[handlerName] instanceof Function)) {
+					throw new Error("Output handler is not defined.");
+				}
+
+				child.hostNode.addEventListener(outputName, (event: CustomEvent) => this.outputHandler(event, handlerName));
+				child.hostNode.removeAttribute(`${outputPrefix}${outputName}`);
 			}
 		}
 	}
 
 	private outputHandler(event: CustomEvent, handlerName: string) {
-		const eventFromChild = this.children.map(child => child.hostNode).indexOf(event.srcElement as HTMLElement) !== -1;
+		const childrenHostNodes = this.children.map(child => child.hostNode);
+		const eventFromChild = childrenHostNodes.includes(event.srcElement as HTMLElement);
+
 		if (eventFromChild) {
-			const currentObject: UnknownProperties = this;
-			const resolvedHandlerName = new PropertyResolver(currentObject).getResolvedName(handlerName);
-			if (!(currentObject[resolvedHandlerName] instanceof Function)) {
-				throw new Error("Output handler is not defined");
-			}
-			currentObject[resolvedHandlerName](event.detail);
+			(<UnknownProperties>this)[handlerName](event.detail);
 		}
 	}
 

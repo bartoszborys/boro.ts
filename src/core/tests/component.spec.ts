@@ -1,15 +1,17 @@
 import { ComponentTest } from './ComponentTest';
 import { ComponentRegistrator } from '../ComponentsRegistrator';
 import { ComponentTestChild } from './ComponentTestChild';
-import { NotExistsInputPropertyComponent } from './NotExistsInputPropertyComponent';
-import { NotExistsOutputPropertyComponent } from './NotExistsOutputPropertyComponent';
+import { ChildInputNotExist } from './ChildInputNotExist';
+import { ParentOutputHandlerNotExist } from './ParentOutputHandlerNotExist';
+import { ParentInputHandlerNotExist } from './ParentInputHandlerNotExist';
 
 const componentRegistrator: ComponentRegistrator = new ComponentRegistrator();
 componentRegistrator.register([
 	ComponentTest,
 	ComponentTestChild,
-	NotExistsInputPropertyComponent,
-	NotExistsOutputPropertyComponent
+	ChildInputNotExist,
+	ParentOutputHandlerNotExist,
+	ParentInputHandlerNotExist
 ]);
 
 function getTestedInstance(hostNode: HTMLElement): ComponentTest{
@@ -76,25 +78,34 @@ test('Input property bound correctly', ()=>{
 	expect(buttonName).toBe(testedComponent.inputDescribeText);
 })
 
-test('Should not bind unset input property', ()=>{
+test('Should not bind unset child input property', ()=>{
 	const hostNode = document.createElement('test');
 	expect( 
-		() => new NotExistsInputPropertyComponent()
+		() => new ChildInputNotExist()
 			.injectComponents( componentRegistrator.get() )
 			.setHostNode(hostNode)
 			.render() 
 	).toThrowError("Unknown object property >> 'notexistinput'.")
 })
 
-test('Should not bind unset output property', ()=>{
+test('Should not bind unset parent output handler', ()=>{
 	const hostNode = document.createElement('test');
-	return;
-	expect( 
-		() => new NotExistsOutputPropertyComponent()
+	expect(
+		() => new ParentOutputHandlerNotExist()
 			.injectComponents( componentRegistrator.get() )
 			.setHostNode(hostNode)
-			.render() 
-	).toThrowError("Unknown object property >> 'notexistoutput'.")
+			.render()
+	).toThrowError("Output handler is not defined.");
+})
+
+test('Should not bind unset parent input member', ()=>{
+	const hostNode = document.createElement('test');
+	expect(
+		() => new ParentInputHandlerNotExist()
+			.injectComponents( componentRegistrator.get() )
+			.setHostNode(hostNode)
+			.render()
+	).toThrowError("Unknown object property >> 'notExistInput'.");
 })
 
 test('Child generated', ()=>{
